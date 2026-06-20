@@ -1,619 +1,918 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2563EB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vejvis">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Vejvis</title>
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --blue: #2563EB; --blue-lt: #DBEAFE; --blue-dk: #1E40AF;
-  --green: #059669; --green-lt: #D1FAE5;
+  --blue: #2563EB; --blue-lt: #EFF6FF; --blue-dk: #1D4ED8;
+  --green: #059669; --green-lt: #ECFDF5;
+  --amber: #B45309; --amber-lt: #FFFBEB;
+  --purple: #7C3AED; --purple-lt: #F5F3FF;
   --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB;
   --gray-400: #9CA3AF; --gray-600: #4B5563; --gray-900: #111827;
-  --red: #DC2626; --border: 1px solid #E5E7EB;
-  --r: 6px; --r-sm: 4px;
+  --red: #EF4444;
+  --r: 12px; --r-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.05);
 }
-html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; color: var(--gray-900); background: var(--gray-50); height: 100%; -webkit-text-size-adjust: 100%; }
-
-/* MOBILE FIRST */
-.layout { display: flex; flex-direction: column; min-height: 100vh; }
-.sidebar { width: 100%; background: #fff; border-bottom: var(--border); display: flex; flex-direction: column; overflow: hidden; }
-.sidebar-head { padding: 14px 16px; border-bottom: var(--border); flex-shrink: 0; }
-.sidebar-head h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-.sidebar-head p { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-.sidebar-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.map-col { display: none; flex-direction: column; }
-.map-col.open { display: flex; }
-#map { height: 55vmax; min-height: 260px; }
-.btn-map-toggle { width: 100%; padding: 10px 16px; font-size: 13px; font-family: inherit; background: var(--gray-50); border: none; border-top: var(--border); color: var(--blue); font-weight: 500; cursor: pointer; text-align: center; }
-
-/* DESKTOP */
-@media (min-width: 640px) {
-  .layout { flex-direction: row; height: 100vh; }
-  .sidebar { width: 330px; min-width: 280px; border-right: var(--border); border-bottom: none; }
-  .map-col { display: flex !important; flex: 1; min-width: 0; }
-  #map { height: auto; flex: 1; }
-  .btn-map-toggle { display: none; }
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px; color: var(--gray-900);
+  background: var(--gray-50); min-height: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
-.section { padding: 12px 16px; border-bottom: var(--border); }
-.sec-label { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+/* HEADER */
+.app-header {
+  background: var(--blue); color: #fff;
+  padding: 14px 16px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.app-header p  { font-size: 11px; opacity: .7; margin-top: 1px; }
 
-/* VEHICLE INPUTS */
-.field-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.field { flex: 1; min-width: 110px; }
-.field label { display: block; font-size: 11px; color: var(--gray-600); margin-bottom: 3px; }
-.field input, .field select { display: block; width: 100%; padding: 6px 8px; font-size: 13px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); -webkit-appearance: none; appearance: none; outline: none; }
-.field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+.lang-toggle { display: flex; gap: 4px; }
+.lang-toggle button {
+  padding: 4px 10px; font-size: 11px; font-weight: 600;
+  font-family: inherit; border: 1.5px solid rgba(255,255,255,.35);
+  border-radius: 99px; background: transparent;
+  color: rgba(255,255,255,.7); cursor: pointer;
+  transition: all .15s;
+}
+.lang-toggle button.active {
+  background: rgba(255,255,255,.2);
+  border-color: rgba(255,255,255,.85); color: #fff;
+}
+
+/* VEHICLE BAR */
+.vehicle-bar {
+  background: #fff; border-bottom: 1px solid var(--gray-200);
+  padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+}
+.v-field { flex: 1; min-width: 130px; }
+.v-field label {
+  display: block; font-size: 10px; font-weight: 600;
+  color: var(--gray-400); text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 4px;
+}
+.v-field input {
+  display: block; width: 100%; padding: 7px 9px;
+  font-size: 14px; font-family: inherit;
+  border: 1.5px solid var(--gray-200); border-radius: var(--r-sm);
+  background: var(--gray-50); color: var(--gray-900);
+  outline: none; -webkit-appearance: none;
+}
+.v-field input:focus { border-color: var(--blue); background: #fff; }
+
+/* TABS */
+.tabs-wrap {
+  background: var(--gray-50);
+  padding: 12px 16px 0;
+  position: sticky; top: 57px; z-index: 90;
+}
+.tabs { display: flex; gap: 4px; }
+.tab-btn {
+  flex: 1; padding: 10px; font-size: 13px; font-weight: 600;
+  font-family: inherit; border: none;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: var(--gray-200); color: var(--gray-600); cursor: pointer;
+  transition: all .12s;
+}
+.tab-btn.active { background: #fff; color: var(--blue); }
+
+/* PRESET ROW */
+.preset-section { padding: 12px 16px 0; }
+.preset-lbl {
+  font-size: 10px; font-weight: 600; color: var(--gray-400);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 6px;
+}
+.preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-preset {
+  padding: 5px 12px; font-size: 11px; font-weight: 500;
+  font-family: inherit; border: 1.5px solid var(--gray-200);
+  border-radius: 99px; background: #fff; color: var(--gray-600);
+  cursor: pointer; white-space: nowrap;
+}
+.btn-preset:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ROUTE LIST */
+.route-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ROUTE CARD */
+.route-card {
+  background: #fff; border-radius: var(--r);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.route-header {
+  padding: 14px 16px 12px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.route-header-main { flex: 1; min-width: 0; cursor: pointer; }
+.route-name {
+  font-size: 15px; font-weight: 600;
+  border: none; background: transparent;
+  color: var(--gray-900); width: 100%;
+  font-family: inherit; outline: none; padding: 0;
+  cursor: text;
+}
+.route-name:focus { color: var(--blue); }
+.route-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.route-cost { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.route-cost-unit { font-size: 11px; color: var(--gray-400); margin-left: 2px; }
+.route-km { font-size: 11px; color: var(--gray-400); }
+.badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 99px; white-space: nowrap;
+}
+.badge-cheapest { background: var(--green-lt); color: var(--green); }
+.route-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-top: 2px; }
+.btn-icon {
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-400); font-size: 18px; line-height: 1;
+  padding: 3px 5px; -webkit-appearance: none; border-radius: var(--r-sm);
+}
+.btn-icon:hover { color: var(--red); background: var(--gray-100); }
+.chevron { font-size: 11px; color: var(--gray-400); transition: transform .15s; }
+.route-card.open .chevron { transform: rotate(180deg); }
+
+/* ROUTE BODY */
+.route-body { display: none; border-top: 1px solid var(--gray-100); }
+.route-card.open .route-body { display: block; }
 
 /* LEG LIST */
-.leg-list { list-style: none; }
-.leg-item { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); cursor: default; user-select: none; }
+.leg-list { list-style: none; padding: 6px 16px; }
+.leg-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--gray-100);
+}
 .leg-item:last-child { border-bottom: none; }
-.leg-item.dragging { opacity: .4; }
-.leg-item.drag-over { border-top: 2px solid var(--blue); }
-
-.drag-handle { color: var(--gray-400); font-size: 15px; cursor: grab; padding: 3px 0; flex-shrink: 0; line-height: 1; margin-top: 4px; }
-.drag-handle:active { cursor: grabbing; }
-
-.leg-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 13px; }
-.leg-icon.drive { background: var(--blue-lt); }
-.leg-icon.ferry { background: var(--green-lt); }
-
-.leg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.leg-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 12px; margin-top: 2px;
+}
+.leg-icon.drive  { background: var(--blue-lt); }
+.leg-icon.ferry  { background: var(--green-lt); }
+.leg-icon.bridge { background: var(--amber-lt); }
+.leg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .leg-row { display: flex; gap: 4px; align-items: center; }
-.leg-row .lbl { font-size: 10px; color: var(--gray-400); width: 28px; flex-shrink: 0; }
-.leg-row input[type="text"] { flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); outline: none; }
-.leg-row input[type="text"]:focus { border-color: var(--blue); }
+.leg-lbl { font-size: 10px; color: var(--gray-400); width: 26px; flex-shrink: 0; }
+.leg-inp {
+  flex: 1; min-width: 0; padding: 4px 7px; font-size: 12px;
+  font-family: inherit; border: 1.5px solid var(--gray-200);
+  border-radius: var(--r-sm); background: #fff; color: var(--gray-900); outline: none;
+}
+.leg-inp:focus { border-color: var(--blue); }
+.leg-price { width: 74px; }
+.leg-price-unit { font-size: 10px; color: var(--gray-400); flex-shrink: 0; }
+.leg-type-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 99px; border: 1.5px solid; cursor: pointer;
+  -webkit-appearance: none; background: none; font-family: inherit; flex-shrink: 0;
+}
+.leg-type-badge.drive  { color: var(--blue);   border-color: #BFDBFE; background: var(--blue-lt); }
+.leg-type-badge.ferry  { color: var(--green);  border-color: #6EE7B7; background: var(--green-lt); }
+.leg-type-badge.bridge { color: var(--amber);  border-color: #FCD34D; background: var(--amber-lt); }
+.btn-leg-remove {
+  background: none; border: none; color: var(--gray-300);
+  font-size: 16px; line-height: 1; cursor: pointer;
+  padding: 2px 4px; flex-shrink: 0; -webkit-appearance: none; margin-top: 4px;
+}
+.btn-leg-remove:hover { color: var(--red); }
 
-.leg-meta { display: flex; gap: 4px; align-items: center; }
-.leg-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; border: 1px solid; cursor: pointer; flex-shrink: 0; -webkit-appearance: none; background: none; font-family: inherit; }
-.leg-type-badge.drive { color: var(--blue); border-color: #BFDBFE; background: var(--blue-lt); }
-.leg-type-badge.ferry { color: var(--green); border-color: #6EE7B7; background: var(--green-lt); }
-.price-input { width: 70px; padding: 3px 6px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); -webkit-appearance: none; outline: none; }
-.price-unit { font-size: 10px; color: var(--gray-400); }
+/* EMPTY LEG STATE */
+.leg-empty {
+  padding: 16px 0; font-size: 12px; color: var(--gray-400); text-align: center;
+}
 
-.leg-remove { background: none; border: none; color: var(--gray-300); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; flex-shrink: 0; -webkit-appearance: none; margin-top: 2px; }
-.leg-remove:hover { color: var(--red); }
+/* ADD LEG BAR */
+.add-leg-bar {
+  padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap;
+  border-top: 1px solid var(--gray-100);
+}
+.btn-add-leg {
+  padding: 6px 13px; font-size: 11px; font-weight: 500;
+  font-family: inherit; border: 1.5px solid var(--gray-200);
+  border-radius: 99px; background: #fff; color: var(--gray-600);
+  cursor: pointer; -webkit-appearance: none; white-space: nowrap;
+}
+.btn-add-leg:hover { background: var(--gray-50); }
 
-/* ADD LEG */
-.add-section { padding: 10px 16px; border-bottom: var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
-.btn { padding: 6px 12px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-600); cursor: pointer; -webkit-appearance: none; white-space: nowrap; }
-.btn:hover { background: var(--gray-100); }
-.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
-.btn.primary:hover { background: var(--blue-dk); }
-.btn.small { padding: 4px 10px; font-size: 11px; }
-
-.preset-section { padding: 10px 16px; border-bottom: var(--border); }
-.preset-row { display: flex; gap: 5px; flex-wrap: wrap; }
-
-/* STATS */
-.stats-section { padding: 12px 16px; }
-.stat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.stat { flex: 1; min-width: 100px; background: var(--gray-50); border: var(--border); border-radius: var(--r-sm); padding: 8px 10px; }
-.stat-lbl { font-size: 10px; color: var(--gray-400); margin-bottom: 2px; }
-.stat-val { font-size: 19px; font-weight: 600; color: var(--gray-900); line-height: 1.15; }
-.stat-unit { font-size: 10px; color: var(--gray-400); }
-
-/* TOTAL */
-.total-bar { padding: 12px 16px; background: #fff; border-top: var(--border); flex-shrink: 0; }
-.total-row { display: flex; justify-content: space-between; align-items: baseline; }
-.total-lbl { font-size: 12px; color: var(--gray-600); }
-.total-val { font-size: 26px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.02em; }
-.total-bd { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+/* COST BREAKDOWN */
+.route-breakdown {
+  padding: 10px 16px; background: var(--gray-50);
+  border-top: 1px solid var(--gray-100); display: flex; flex-direction: column; gap: 3px;
+}
+.bd-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray-600); }
+.bd-row.total {
+  font-size: 13px; font-weight: 700; color: var(--gray-900);
+  border-top: 1px solid var(--gray-200); margin-top: 4px; padding-top: 6px;
+}
 
 /* MAP */
-.map-foot { padding: 7px 12px; font-size: 11px; color: var(--gray-400); background: #fff; border-top: var(--border); flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
-.legend { display: flex; gap: 12px; }
-.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray-600); }
-.legend-line { width: 22px; height: 2px; }
-.legend-line.road { background: var(--blue); }
-.legend-line.ferry { background: repeating-linear-gradient(90deg, #059669 0, #059669 5px, transparent 5px, transparent 9px); }
-#status { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-map-wrap { border-top: 1px solid var(--gray-100); position: relative; }
+.route-map { height: 200px; }
+.map-status {
+  padding: 5px 12px; font-size: 10px; color: var(--gray-400);
+  background: #fff; border-top: 1px solid var(--gray-100);
+  display: flex; gap: 12px; align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-line { width: 18px; height: 2px; }
+.legend-line.drive  { background: var(--blue); }
+.legend-line.ferry  { background: repeating-linear-gradient(90deg,var(--green) 0,var(--green) 5px,transparent 5px,transparent 9px); }
+.legend-line.bridge { background: var(--amber); }
+.map-status-text { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* BOTTOM BAR */
+.bottom-bar { padding: 0 16px 32px; }
+.btn-primary {
+  width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
+  font-family: inherit; border: none; border-radius: var(--r);
+  background: var(--blue); color: #fff; cursor: pointer;
+  -webkit-appearance: none; box-shadow: var(--shadow-md);
+}
+.btn-primary:hover { background: var(--blue-dk); }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--gray-400);
+}
+.empty-state-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 15px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; }
+.empty-state p  { font-size: 13px; line-height: 1.5; }
 </style>
 </head>
 <body>
-<div class="layout">
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-head">
-      <h1>Vejvis</h1>
-      <p>Beregn rejseomkostninger til Bornholm</p>
-    </div>
-
-    <div class="sidebar-scroll">
-
-      <!-- Vehicle -->
-      <div class="section">
-        <div class="sec-label">Køretøj &amp; brændstof</div>
-        <div class="field-grid">
-          <div class="field">
-            <label for="f-cons">Forbrug (L/100 km)</label>
-            <input type="number" id="f-cons" value="6.5" min="1" max="30" step="0.1">
-          </div>
-          <div class="field">
-            <label for="f-price">Brændstofpris (kr/L)</label>
-            <input type="number" id="f-price" value="17" min="1" max="50" step="0.5">
-          </div>
-          <div class="field">
-            <label for="f-toll">Bro / vejafgift (kr)</label>
-            <input type="number" id="f-toll" value="0" min="0" step="10">
-          </div>
-          <div class="field">
-            <label for="f-trip">Tur</label>
-            <select id="f-trip">
-              <option value="2">Tur/retur</option>
-              <option value="1">Enkelttur</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Presets -->
-      <div class="preset-section">
-        <div class="sec-label">Forudindstillinger</div>
-        <div class="preset-row">
-          <button class="btn small" data-preset="dp">D+ (4 færger)</button>
-          <button class="btn small" data-preset="b">B (Køge)</button>
-          <button class="btn small" data-preset="a">A (Ystad, bro)</button>
-          <button class="btn small" data-preset="clear">Ryd</button>
-        </div>
-      </div>
-
-      <!-- Legs -->
-      <div class="section">
-        <div class="sec-label">Etaper</div>
-        <ul class="leg-list" id="leg-list"></ul>
-      </div>
-
-      <!-- Add leg -->
-      <div class="add-section">
-        <button class="btn primary" id="btn-drive">+ Køre-etape</button>
-        <button class="btn" id="btn-ferry">+ Færgeoverfart</button>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-section">
-        <div class="sec-label">Omkostningsoversigt</div>
-        <div class="stat-grid">
-          <div class="stat">
-            <div class="stat-lbl">Vejkm (total)</div>
-            <div class="stat-val" id="s-km">--</div>
-            <div class="stat-unit">km</div>
-          </div>
-          <div class="stat">
-            <div class="stat-lbl">Brændstof brugt</div>
-            <div class="stat-val" id="s-l">--</div>
-            <div class="stat-unit">liter</div>
-          </div>
-          <div class="stat">
-            <div class="stat-lbl">Brændstofomk.</div>
-            <div class="stat-val" id="s-fuel">--</div>
-            <div class="stat-unit">kr</div>
-          </div>
-          <div class="stat">
-            <div class="stat-lbl">Færger i alt</div>
-            <div class="stat-val" id="s-ferry">--</div>
-            <div class="stat-unit">kr</div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- end scroll -->
-
-    <div class="total-bar">
-      <div class="total-row">
-        <span class="total-lbl">Total</span>
-        <span class="total-val" id="s-total">--</span>
-      </div>
-      <div class="total-bd" id="s-bd"></div>
-    </div>
-
-    <button class="btn-map-toggle" id="btn-map-toggle">Vis kort ▾</button>
+<header class="app-header">
+  <div>
+    <h1>Vejvis</h1>
+    <p id="app-subtitle"></p>
   </div>
-
-  <!-- MAP -->
-  <div class="map-col" id="map-col">
-    <div id="map"></div>
-    <div class="map-foot">
-      <div class="legend">
-        <div class="legend-item"><div class="legend-line road"></div>Vej (OSRM)</div>
-        <div class="legend-item"><div class="legend-line ferry"></div>Færge</div>
-      </div>
-      <div id="status">Vælg en forudindstilling for at starte.</div>
-    </div>
+  <div class="lang-toggle">
+    <button id="lang-en" onclick="setLang('en')">EN</button>
+    <button id="lang-da" onclick="setLang('da')">DA</button>
   </div>
+</header>
 
-</div><!-- end layout -->
+<div class="vehicle-bar">
+  <div class="v-field">
+    <label id="lbl-cons"></label>
+    <input type="number" id="f-cons" min="1" max="30" step="0.1"
+           oninput="S.cons=+this.value; recalcAll(); updateAllHeaders()">
+  </div>
+  <div class="v-field">
+    <label id="lbl-price"></label>
+    <input type="number" id="f-price" min="1" max="50" step="0.5"
+           oninput="S.price=+this.value; recalcAll(); updateAllHeaders()">
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn" id="tab-out" onclick="switchTab('out')"></button>
+    <button class="tab-btn" id="tab-ret" onclick="switchTab('ret')"></button>
+  </div>
+</div>
+
+<div class="preset-section">
+  <div class="preset-lbl" id="lbl-presets"></div>
+  <div class="preset-row" id="preset-row"></div>
+</div>
+
+<div id="route-list" class="route-list"></div>
+
+<div class="bottom-bar">
+  <button class="btn-primary" id="btn-add-route" onclick="addRoute()"></button>
+</div>
 
 <script>
 (function () {
 'use strict';
 
-/* ── DATA MODEL ──────────────────────────────────────────────────────────────
-   A route is a list of LEGS. Each leg is either:
-     { type:'drive', from:'Name', fromLat, fromLon, to:'Name', toLat, toLon }
-     { type:'ferry', from:'Name', fromLat, fromLon, to:'Name', toLat, toLon,
-                     name:'Ferry name', price: 0 }
-   OSRM is only called for drive legs.
-   Ferry legs are drawn as straight dashed lines, price added to total.
-*/
-
-var legs = [];
-var roadKm = 0;
-var map, driveLayer, ferryLayer, markerLayer;
-var geocodeCache = {};
-var updateTimer = null;
-var dragSrcIdx = null;
-
-// ── PRESETS ──────────────────────────────────────────────────────────────────
-var PRESETS = {
-  dp: {
-    toll: 0,
-    legs: [
-      { type:'drive', from:'Silkeborg',          fromLat:56.1684, fromLon:9.5733,  to:'Aarhus færgeterminal', toLat:56.1497, toLon:10.2195 },
-      { type:'ferry', from:'Aarhus',             fromLat:56.1497, fromLon:10.2195, to:'Odden',                toLat:55.977,  toLon:11.301,  name:'Molslinjen Aarhus-Odden',    price:1198 },
-      { type:'drive', from:'Odden',              fromLat:55.977,  fromLon:11.301,  to:'Rørvig færge',         toLat:55.945,  toLon:11.767 },
-      { type:'ferry', from:'Rørvig',             fromLat:55.945,  fromLon:11.767,  to:'Hundested',            toLat:55.966,  toLon:11.845,  name:'Rørvig-Hundested',           price:330  },
-      { type:'drive', from:'Hundested',          fromLat:55.966,  fromLon:11.845,  to:'Helsingør færge',      toLat:56.033,  toLon:12.617 },
-      { type:'ferry', from:'Helsingør',          fromLat:56.033,  fromLon:12.617,  to:'Helsingborg',          toLat:56.046,  toLon:12.695,  name:'Øresundslinjen HH',          price:598  },
-      { type:'drive', from:'Helsingborg',        fromLat:56.046,  fromLon:12.695,  to:'Ystad færgeterminal',  toLat:55.425,  toLon:13.829 },
-      { type:'ferry', from:'Ystad',              fromLat:55.425,  fromLon:13.829,  to:'Rønne',                toLat:55.101,  toLon:14.708,  name:'Bornholmslinjen Ystad-Rønne', price:1198 }
-    ]
-  },
-  b: {
-    toll: 410,
-    legs: [
-      { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Køge færgeterminal', toLat:55.459, toLon:12.185 },
-      { type:'ferry', from:'Køge',      fromLat:55.459,  fromLon:12.185, to:'Rønne',              toLat:55.101, toLon:14.708, name:'Bornholmslinjen Køge-Rønne', price:1198 }
-    ]
-  },
-  a: {
-    toll: 1180,
-    legs: [
-      { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Ystad færgeterminal', toLat:55.425, toLon:13.829 },
-      { type:'ferry', from:'Ystad',     fromLat:55.425,  fromLon:13.829, to:'Rønne',               toLat:55.101, toLon:14.708, name:'Bornholmslinjen Ystad-Rønne', price:1198 }
-    ]
-  }
+// ── STATE ────────────────────────────────────────────────────────────────────
+var S = {
+  lang:   localStorage.getItem('vjlang') || 'en',
+  cons:   6.5,
+  price:  17,
+  tab:    'out',
+  out:    [],
+  ret:    [],
+  open:   {},
+  maps:   {},
+  cache:  {},
+  timers: {},
+  uid:    1
 };
 
-function cloneLegs(src) {
-  return src.map(function(l) { return Object.assign({}, l); });
+// ── TRANSLATIONS ──────────────────────────────────────────────────────────────
+var TR = {
+  en: {
+    subtitle: 'Trip cost calculator',
+    outbound: 'Outbound', ret: 'Return',
+    add_route: '+ Add route', new_route: 'New route',
+    presets: 'Load preset:',
+    add_drive: '+ Drive', add_ferry: '+ Ferry', add_bridge: '+ Bridge',
+    drive: 'Drive', ferry: 'Ferry', bridge: 'Bridge',
+    lbl_cons: 'Consumption (L/100 km)', lbl_price: 'Fuel price (kr/L)',
+    from: 'From', to: 'To', name: 'Name',
+    cheapest: 'Cheapest',
+    fuel_cost: 'Fuel cost', crossings: 'Ferries & bridges', km_lbl: 'Road km',
+    total: 'Total',
+    no_legs: 'No legs yet — add a drive, ferry, or bridge.',
+    empty: 'No routes yet.', empty_hint: 'Load a preset or add a route.',
+    routing: 'Routing…', done: 'Done.',
+    one_way: 'one-way',
+  },
+  da: {
+    subtitle: 'Rejseomkostningsberegner',
+    outbound: 'Ud', ret: 'Hjem',
+    add_route: '+ Tilføj rute', new_route: 'Ny rute',
+    presets: 'Indlæs forudindstilling:',
+    add_drive: '+ Køretur', add_ferry: '+ Færge', add_bridge: '+ Bro',
+    drive: 'Køretur', ferry: 'Færge', bridge: 'Bro',
+    lbl_cons: 'Forbrug (L/100 km)', lbl_price: 'Brændstofpris (kr/L)',
+    from: 'Fra', to: 'Til', name: 'Navn',
+    cheapest: 'Billigst',
+    fuel_cost: 'Brændstofomk.', crossings: 'Færger & broer', km_lbl: 'Vejkm',
+    total: 'Total',
+    no_legs: 'Ingen etaper endnu — tilføj køretur, færge eller bro.',
+    empty: 'Ingen ruter endnu.', empty_hint: 'Indlæs en forudindstilling eller tilføj en rute.',
+    routing: 'Beregner rute…', done: 'Færdig.',
+    one_way: 'én vej',
+  }
+};
+function t(k) { return TR[S.lang][k] || k; }
+
+// ── PRESETS ───────────────────────────────────────────────────────────────────
+var PRESETS = {
+  dp: { name: 'D+ (4 ferries)', legs: [
+    { type:'drive',  from:'Silkeborg',   fromLat:56.1684, fromLon:9.5733,  to:'Aarhus Havn',    toLat:56.158,  toLon:10.214  },
+    { type:'ferry',  from:'Aarhus',      fromLat:56.158,  fromLon:10.214,  to:'Odden',           toLat:55.977,  toLon:11.301,  name:'Molslinjen Aarhus–Odden',     price:1198 },
+    { type:'drive',  from:'Odden',       fromLat:55.977,  fromLon:11.301,  to:'Rørvig',          toLat:55.945,  toLon:11.767  },
+    { type:'ferry',  from:'Rørvig',      fromLat:55.945,  fromLon:11.767,  to:'Hundested',       toLat:55.966,  toLon:11.845,  name:'Rørvig–Hundested',            price:330  },
+    { type:'drive',  from:'Hundested',   fromLat:55.966,  fromLon:11.845,  to:'Helsingør',       toLat:56.033,  toLon:12.617  },
+    { type:'ferry',  from:'Helsingør',   fromLat:56.033,  fromLon:12.617,  to:'Helsingborg',     toLat:56.046,  toLon:12.695,  name:'Øresundslinjen HH',           price:598  },
+    { type:'drive',  from:'Helsingborg', fromLat:56.046,  fromLon:12.695,  to:'Ystad',           toLat:55.425,  toLon:13.829  },
+    { type:'ferry',  from:'Ystad',       fromLat:55.425,  fromLon:13.829,  to:'Rønne',           toLat:55.101,  toLon:14.708,  name:'Bornholmslinjen Ystad–Rønne', price:1198 }
+  ]},
+  b: { name: 'Via Storebælt + Køge', legs: [
+    { type:'drive',  from:'Silkeborg',  fromLat:56.1684, fromLon:9.5733, to:'Nyborg',    toLat:55.312, toLon:10.792 },
+    { type:'bridge', from:'Nyborg',     fromLat:55.312,  fromLon:10.792, to:'Korsør',   toLat:55.334, toLon:11.138, name:'Storebæltsbroen', price:410  },
+    { type:'drive',  from:'Korsør',     fromLat:55.334,  fromLon:11.138, to:'Køge',     toLat:55.459, toLon:12.185 },
+    { type:'ferry',  from:'Køge',       fromLat:55.459,  fromLon:12.185, to:'Rønne',    toLat:55.101, toLon:14.708, name:'Bornholmslinjen Køge–Rønne', price:1198 }
+  ]},
+  a: { name: 'Via Øresund + Ystad', legs: [
+    { type:'drive',  from:'Silkeborg',  fromLat:56.1684, fromLon:9.5733, to:'Kastrup',   toLat:55.615, toLon:12.656 },
+    { type:'bridge', from:'København',  fromLat:55.648,  fromLon:12.568, to:'Malmö',     toLat:55.605, toLon:13.003, name:'Øresundsbroen', price:1180 },
+    { type:'drive',  from:'Malmö',      fromLat:55.605,  fromLon:13.003, to:'Ystad',     toLat:55.425, toLon:13.829 },
+    { type:'ferry',  from:'Ystad',      fromLat:55.425,  fromLon:13.829, to:'Rønne',     toLat:55.101, toLon:14.708, name:'Bornholmslinjen Ystad–Rønne', price:1198 }
+  ]}
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function uid() { return 'r' + (S.uid++); }
+function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function routes() { return S[S.tab]; }
+function routeById(id) {
+  return S.out.concat(S.ret).find(function(r){ return r.id === id; });
+}
+function cloneLegs(legs) {
+  return legs.map(function(l){ return Object.assign({}, l); });
+}
+
+// ── RECALC ────────────────────────────────────────────────────────────────────
+function recalcRoute(route) {
+  var crossings = 0;
+  route.legs.forEach(function(l) {
+    if (l.type === 'ferry' || l.type === 'bridge') crossings += (parseFloat(l.price) || 0);
+  });
+  var fuel = route.km * S.cons / 100 * S.price;
+  route.crossings = crossings;
+  route.fuel = fuel;
+  route.total = fuel + crossings;
+}
+
+function recalcAll() {
+  S.out.concat(S.ret).forEach(recalcRoute);
+}
+
+function cheapestId(tab) {
+  var list = S[tab].filter(function(r){ return r.total > 0; });
+  if (list.length < 2) return null;
+  var min = list.reduce(function(a, b){ return a.total < b.total ? a : b; });
+  return min.id;
+}
+
+// ── GEOCODING ─────────────────────────────────────────────────────────────────
+function geocode(name, cb) {
+  var key = name.trim().toLowerCase();
+  if (!key) { cb(null, null); return; }
+  if (S.cache[key]) { cb(S.cache[key].lat, S.cache[key].lon); return; }
+  fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=1')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d[0]) {
+        var p = { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
+        S.cache[key] = p; cb(p.lat, p.lon);
+      } else cb(null, null);
+    }).catch(function(){ cb(null, null); });
+}
+
+function geocodeLeg(leg, done) {
+  var pending = 0;
+  function fin() { if (--pending === 0 && done) done(); }
+  if (leg.from && leg.fromLat == null) {
+    pending++;
+    geocode(leg.from, function(la, lo){ leg.fromLat = la; leg.fromLon = lo; fin(); });
+  }
+  if (leg.to && leg.toLat == null) {
+    pending++;
+    geocode(leg.to, function(la, lo){ leg.toLat = la; leg.toLon = lo; fin(); });
+  }
+  if (!pending && done) done();
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function initMap(id) {
+  var el = document.getElementById('map-' + id);
+  if (!el) return;
+  if (S.maps[id]) { try { S.maps[id].remove(); } catch(e){} }
+  var m = L.map(el, { zoomControl: true }).setView([55.8, 11.5], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 18
+  }).addTo(m);
+  S.maps[id] = m;
+  S.maps[id]._drive   = L.layerGroup().addTo(m);
+  S.maps[id]._ferry   = L.layerGroup().addTo(m);
+  S.maps[id]._bridge  = L.layerGroup().addTo(m);
+  S.maps[id]._markers = L.layerGroup().addTo(m);
+}
+
+function drawMarker(m, ll, name, big) {
+  var sz = big ? 13 : 9;
+  var icon = L.divIcon({
+    className: '',
+    html: '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:#2563EB;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
+    iconSize: [sz,sz], iconAnchor: [Math.floor(sz/2), Math.floor(sz/2)]
+  });
+  L.marker(ll, {icon:icon}).bindTooltip(name||'', {direction:'top',offset:[0,-8]}).addTo(m._markers);
+}
+
+function drawFromGeo(id) {
+  var route = routeById(id);
+  var m = S.maps[id];
+  if (!route || !m || !route.geo) return;
+  m._drive.clearLayers(); m._ferry.clearLayers();
+  m._bridge.clearLayers(); m._markers.clearLayers();
+  var g = route.geo;
+  var allCoords = [];
+  g.driveSegs.forEach(function(seg) {
+    L.polyline(seg, {color:'#2563EB', weight:3, opacity:.82}).addTo(m._drive);
+    allCoords = allCoords.concat(seg);
+  });
+  g.ferrySegs.forEach(function(seg) {
+    L.polyline(seg, {color:'#059669', weight:2.5, dashArray:'7 5', opacity:.85}).addTo(m._ferry);
+    allCoords = allCoords.concat(seg);
+  });
+  g.bridgeSegs.forEach(function(seg) {
+    L.polyline(seg, {color:'#B45309', weight:3, opacity:.85}).addTo(m._bridge);
+    allCoords = allCoords.concat(seg);
+  });
+  g.markers.forEach(function(mk) { drawMarker(m, mk.ll, mk.name, mk.big); });
+  if (allCoords.length > 1) {
+    m.fitBounds(L.latLngBounds(allCoords), {padding:[24,24]});
+  }
+  m.invalidateSize();
+  setStatus(id, g.statusText);
+}
+
+function setStatus(id, msg) {
+  var el = document.getElementById('mstatus-' + id);
+  if (el) el.textContent = msg || '';
+}
+
+function scheduleUpdate(id) {
+  clearTimeout(S.timers[id]);
+  S.timers[id] = setTimeout(function(){ updateMapAsync(id); }, 400);
+}
+
+async function updateMapAsync(id) {
+  var route = routeById(id);
+  if (!route) return;
+  setStatus(id, t('routing'));
+  var driveSegs = [], ferrySegs = [], bridgeSegs = [], markers = [];
+  var totalKm = 0;
+  var legCount = route.legs.length;
+  for (var i = 0; i < legCount; i++) {
+    var leg = route.legs[i];
+    if (!leg.fromLat || !leg.toLat) continue;
+    var fll = [leg.fromLat, leg.fromLon];
+    var tll = [leg.toLat,   leg.toLon];
+    if (i === 0) markers.push({ll:fll, name:leg.from, big:true});
+    markers.push({ll:tll, name:leg.to, big:(i===legCount-1)});
+    if (leg.type === 'drive') {
+      var cs = leg.fromLon+','+leg.fromLat+';'+leg.toLon+','+leg.toLat;
+      try {
+        var resp = await fetch('https://router.project-osrm.org/route/v1/driving/'+cs+'?overview=full&geometries=geojson');
+        var data = await resp.json();
+        if (data.routes && data.routes[0]) {
+          totalKm += data.routes[0].distance / 1000;
+          var geo = data.routes[0].geometry.coordinates.map(function(c){ return [c[1],c[0]]; });
+          driveSegs.push(geo);
+        }
+      } catch(e) { driveSegs.push([fll, tll]); }
+    } else if (leg.type === 'ferry') {
+      ferrySegs.push([fll, tll]);
+    } else if (leg.type === 'bridge') {
+      bridgeSegs.push([fll, tll]);
+    }
+  }
+  route.km = Math.round(totalKm);
+  recalcRoute(route);
+  var fc = route.legs.filter(function(l){ return l.type==='ferry'||l.type==='bridge'; }).length;
+  route.geo = {
+    driveSegs: driveSegs, ferrySegs: ferrySegs, bridgeSegs: bridgeSegs,
+    markers: markers,
+    statusText: (route.km>0 ? route.km+' km '+t('one_way') : '') +
+                (fc>0 ? (route.km>0?' · ':'') + fc+' '+t('crossings') : '') || t('done')
+  };
+  drawFromGeo(id);
+  updateRouteHeader(id);
+}
+
+// ── RENDER HELPERS ────────────────────────────────────────────────────────────
+function updateRouteHeader(id) {
+  var route = routeById(id);
+  if (!route) return;
+  var costEl = document.getElementById('rcost-' + id);
+  var bdEl   = document.getElementById('rbd-'   + id);
+  var badgeEl= document.getElementById('rbadge-'+ id);
+  var kmEl   = document.getElementById('rkm-'   + id);
+  if (costEl) costEl.textContent = route.total > 0 ? fmt(route.total) : '–';
+  if (kmEl)   kmEl.textContent   = route.km > 0 ? route.km + ' km' : '';
+  if (bdEl)   bdEl.innerHTML = route.total > 0
+    ? '<div class="bd-row"><span>'+t('fuel_cost')+'</span><span>'+fmt(route.fuel)+' kr</span></div>'
+    + '<div class="bd-row"><span>'+t('crossings')+'</span><span>'+fmt(route.crossings)+' kr</span></div>'
+    + '<div class="bd-row total"><span>'+t('total')+'</span><span>'+fmt(route.total)+' kr</span></div>'
+    : '';
+  var cheap = cheapestId(S.tab);
+  routes().forEach(function(r) {
+    var b = document.getElementById('rbadge-' + r.id);
+    if (b) b.innerHTML = (cheap === r.id) ? '<span class="badge badge-cheapest">'+t('cheapest')+'</span>' : '';
+  });
+}
+
+function updateAllHeaders() {
+  routes().forEach(function(r){ updateRouteHeader(r.id); });
+}
+
+function legHTML(routeId, leg, idx) {
+  var typeIcons = {drive:'🚗', ferry:'⛴', bridge:'🌉'};
+  var icon = typeIcons[leg.type] || '🚗';
+  var isMove = leg.type !== 'drive'; // ferry or bridge has price
+  var rows = [
+    '<div class="leg-row">',
+      '<span class="leg-lbl">'+esc(t('from'))+'</span>',
+      '<input class="leg-inp" type="text" value="'+esc(leg.from||'')+'"',
+        ' data-rid="'+routeId+'" data-idx="'+idx+'" data-field="from"',
+        ' placeholder="City…">',
+    '</div>',
+    '<div class="leg-row">',
+      '<span class="leg-lbl">'+esc(t('to'))+'</span>',
+      '<input class="leg-inp" type="text" value="'+esc(leg.to||'')+'"',
+        ' data-rid="'+routeId+'" data-idx="'+idx+'" data-field="to"',
+        ' placeholder="City…">',
+    '</div>',
+  ];
+  if (isMove) {
+    rows.push(
+      '<div class="leg-row">',
+        '<span class="leg-lbl">'+esc(t('name'))+'</span>',
+        '<input class="leg-inp" type="text" value="'+esc(leg.name||'')+'"',
+          ' data-rid="'+routeId+'" data-idx="'+idx+'" data-field="name"',
+          ' placeholder="Optional…">',
+      '</div>',
+      '<div class="leg-row">',
+        '<button class="leg-type-badge '+leg.type+'" data-rid="'+routeId+'" data-idx="'+idx+'" data-action="cycle">',
+          t(leg.type),
+        '</button>',
+        '<input class="leg-inp leg-price" type="number" value="'+(leg.price||0)+'" min="0" step="50"',
+          ' data-rid="'+routeId+'" data-idx="'+idx+'" data-field="price">',
+        '<span class="leg-price-unit">kr</span>',
+      '</div>'
+    );
+  } else {
+    rows.push(
+      '<div class="leg-row">',
+        '<button class="leg-type-badge '+leg.type+'" data-rid="'+routeId+'" data-idx="'+idx+'" data-action="cycle">',
+          t(leg.type),
+        '</button>',
+      '</div>'
+    );
+  }
+  return [
+    '<li class="leg-item" data-legidx="'+idx+'">',
+      '<div class="leg-icon '+leg.type+'">'+icon+'</div>',
+      '<div class="leg-body">'+rows.join('')+'</div>',
+      '<button class="btn-leg-remove" data-rid="'+routeId+'" data-idx="'+idx+'" data-action="removeLeg" title="Remove">×</button>',
+    '</li>'
+  ].join('');
+}
+
+function routeCardHTML(route) {
+  var cheap = cheapestId(S.tab);
+  var badge = (cheap === route.id) ? '<span class="badge badge-cheapest">'+t('cheapest')+'</span>' : '';
+  var cost  = route.total > 0 ? fmt(route.total) : '–';
+  var km    = route.km > 0 ? route.km + ' km' : '';
+  var bd    = route.total > 0
+    ? '<div class="bd-row"><span>'+t('fuel_cost')+'</span><span>'+fmt(route.fuel)+' kr</span></div>'
+    + '<div class="bd-row"><span>'+t('crossings')+'</span><span>'+fmt(route.crossings)+' kr</span></div>'
+    + '<div class="bd-row total"><span>'+t('total')+'</span><span>'+fmt(route.total)+' kr</span></div>'
+    : '';
+  var legItems = route.legs.length
+    ? route.legs.map(function(l,i){ return legHTML(route.id, l, i); }).join('')
+    : '<li class="leg-empty">'+t('no_legs')+'</li>';
+  var isOpen = S.open[route.id];
+
+  return [
+    '<div class="route-card'+(isOpen?' open':'')+'" id="card-'+route.id+'">',
+      '<div class="route-header">',
+        '<div class="route-header-main" data-action="toggle" data-rid="'+route.id+'">',
+          '<input class="route-name" type="text" value="'+esc(route.name)+'"',
+            ' data-rid="'+route.id+'" data-action="rename"',
+            ' onclick="event.stopPropagation()">',
+          '<div class="route-meta">',
+            '<span class="route-cost" id="rcost-'+route.id+'">'+cost+'</span>',
+            '<span class="route-cost-unit">kr</span>',
+            '<span class="route-km" id="rkm-'+route.id+'">'+km+'</span>',
+            '<span id="rbadge-'+route.id+'">'+badge+'</span>',
+          '</div>',
+        '</div>',
+        '<div class="route-actions">',
+          '<button class="btn-icon" data-rid="'+route.id+'" data-action="delete" title="Delete">×</button>',
+          '<span class="chevron">▾</span>',
+        '</div>',
+      '</div>',
+      '<div class="route-body">',
+        '<ul class="leg-list" id="legs-'+route.id+'">'+legItems+'</ul>',
+        '<div class="add-leg-bar">',
+          '<button class="btn-add-leg" data-rid="'+route.id+'" data-action="addDrive">'+t('add_drive')+'</button>',
+          '<button class="btn-add-leg" data-rid="'+route.id+'" data-action="addFerry">'+t('add_ferry')+'</button>',
+          '<button class="btn-add-leg" data-rid="'+route.id+'" data-action="addBridge">'+t('add_bridge')+'</button>',
+        '</div>',
+        '<div class="route-breakdown" id="rbd-'+route.id+'">'+bd+'</div>',
+        '<div class="route-map-wrap">',
+          '<div class="route-map" id="map-'+route.id+'"></div>',
+          '<div class="map-status">',
+            '<div class="legend-item"><div class="legend-line drive"></div> '+t('drive')+'</div>',
+            '<div class="legend-item"><div class="legend-line ferry"></div> '+t('ferry')+'</div>',
+            '<div class="legend-item"><div class="legend-line bridge"></div> '+t('bridge')+'</div>',
+            '<span class="map-status-text" id="mstatus-'+route.id+'"></span>',
+          '</div>',
+        '</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+function renderLegList(routeId) {
+  var route = routeById(routeId);
+  var el = document.getElementById('legs-' + routeId);
+  if (!route || !el) return;
+  var html = route.legs.length
+    ? route.legs.map(function(l,i){ return legHTML(routeId, l, i); }).join('')
+    : '<li class="leg-empty">'+t('no_legs')+'</li>';
+  el.innerHTML = html;
+}
+
+function renderRoutes() {
+  // Destroy maps before wiping DOM
+  routes().forEach(function(r) {
+    if (S.maps[r.id]) { try { S.maps[r.id].remove(); } catch(e){} delete S.maps[r.id]; }
+  });
+
+  var el = document.getElementById('route-list');
+  if (!routes().length) {
+    el.innerHTML = '<div class="empty-state">'
+      + '<div class="empty-state-icon">🗺️</div>'
+      + '<h3>'+t('empty')+'</h3>'
+      + '<p>'+t('empty_hint')+'</p>'
+      + '</div>';
+    return;
+  }
+
+  el.innerHTML = routes().map(routeCardHTML).join('');
+
+  // Re-init maps for open routes
+  routes().forEach(function(r) {
+    if (S.open[r.id]) {
+      initMap(r.id);
+      if (r.geo) drawFromGeo(r.id); else scheduleUpdate(r.id);
+    }
+  });
+}
+
+function renderLabels() {
+  document.getElementById('app-subtitle').textContent  = t('subtitle');
+  document.getElementById('lbl-cons').textContent      = t('lbl_cons');
+  document.getElementById('lbl-price').textContent     = t('lbl_price');
+  document.getElementById('tab-out').textContent       = t('outbound');
+  document.getElementById('tab-ret').textContent       = t('ret');
+  document.getElementById('btn-add-route').textContent = t('add_route');
+  document.getElementById('lbl-presets').textContent   = t('presets');
+  document.getElementById('lang-en').className = S.lang==='en' ? 'active' : '';
+  document.getElementById('lang-da').className = S.lang==='da' ? 'active' : '';
+  document.getElementById('tab-out').className = 'tab-btn' + (S.tab==='out' ? ' active' : '');
+  document.getElementById('tab-ret').className = 'tab-btn' + (S.tab==='ret' ? ' active' : '');
+  // Preset row
+  var pr = document.getElementById('preset-row');
+  pr.innerHTML = Object.keys(PRESETS).map(function(k) {
+    return '<button class="btn-preset" data-preset="'+k+'">'+esc(PRESETS[k].name)+'</button>';
+  }).join('');
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function addRoute() {
+  var route = { id:uid(), name:t('new_route'), legs:[], km:0, total:0, fuel:0, crossings:0, geo:null };
+  routes().push(route);
+  S.open[route.id] = true;
+  renderRoutes();
+  // Focus name input
+  var nameEl = document.querySelector('#card-'+route.id+' .route-name');
+  if (nameEl) { nameEl.focus(); nameEl.select(); }
+}
+
+function deleteRoute(id) {
+  var tab = S.tab;
+  S[tab] = S[tab].filter(function(r){ return r.id !== id; });
+  if (S.maps[id]) { try { S.maps[id].remove(); } catch(e){} delete S.maps[id]; }
+  delete S.open[id];
+  clearTimeout(S.timers[id]);
+  renderRoutes();
+}
+
+function toggleRoute(id) {
+  var wasOpen = S.open[id];
+  S.open[id] = !wasOpen;
+  var card = document.getElementById('card-' + id);
+  if (!card) return;
+  if (S.open[id]) {
+    card.classList.add('open');
+    if (!S.maps[id]) {
+      initMap(id);
+      var route = routeById(id);
+      if (route && route.geo) drawFromGeo(id); else scheduleUpdate(id);
+    } else {
+      S.maps[id].invalidateSize();
+    }
+  } else {
+    card.classList.remove('open');
+  }
 }
 
 function loadPreset(key) {
   var p = PRESETS[key];
   if (!p) return;
-  legs = cloneLegs(p.legs);
-  document.getElementById('f-toll').value = p.toll;
-  renderLegs();
-  scheduleMapUpdate();
+  var route = {
+    id: uid(), name: p.name,
+    legs: cloneLegs(p.legs),
+    km: 0, total: 0, fuel: 0, crossings: 0, geo: null
+  };
+  recalcRoute(route);
+  routes().push(route);
+  S.open[route.id] = true;
+  renderRoutes();
+  scheduleUpdate(route.id);
 }
 
-function clearAll() {
-  legs = [];
-  roadKm = 0;
-  renderLegs();
-  driveLayer.clearLayers();
-  ferryLayer.clearLayers();
-  markerLayer.clearLayers();
-  recalc();
-  setStatus('Ryddet.');
+function addLeg(routeId, type) {
+  var route = routeById(routeId);
+  if (!route) return;
+  var leg = { type:type, from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null };
+  if (type !== 'drive') { leg.name = ''; leg.price = 0; }
+  route.legs.push(leg);
+  renderLegList(routeId);
 }
 
-// ── RENDER LEG LIST ───────────────────────────────────────────────────────────
-function renderLegs() {
-  var el = document.getElementById('leg-list');
-  if (legs.length === 0) {
-    el.innerHTML = '<li style="padding:10px 0;font-size:12px;color:#9CA3AF;">Ingen etaper endnu. Tilføj en køre-etape eller færgeoverfart.</li>';
-    recalc();
+function removeLeg(routeId, idx) {
+  var route = routeById(routeId);
+  if (!route) return;
+  route.legs.splice(idx, 1);
+  route.geo = null;
+  recalcRoute(route);
+  renderLegList(routeId);
+  updateRouteHeader(routeId);
+  scheduleUpdate(routeId);
+}
+
+var LEG_CYCLE = { drive:'ferry', ferry:'bridge', bridge:'drive' };
+function cycleLegType(routeId, idx) {
+  var route = routeById(routeId);
+  if (!route) return;
+  var leg = route.legs[idx];
+  leg.type = LEG_CYCLE[leg.type] || 'drive';
+  if (leg.type !== 'drive' && leg.price == null) leg.price = 0;
+  route.geo = null;
+  renderLegList(routeId);
+  scheduleUpdate(routeId);
+}
+
+function updateLegField(routeId, idx, field, val) {
+  var route = routeById(routeId);
+  if (!route) return;
+  var leg = route.legs[idx];
+  if (field === 'price') {
+    leg.price = parseFloat(val) || 0;
+    recalcRoute(route);
+    updateRouteHeader(routeId);
     return;
   }
-
-  el.innerHTML = '';
-  legs.forEach(function(leg, i) {
-    var li = document.createElement('li');
-    li.className = 'leg-item';
-    li.setAttribute('draggable', 'true');
-    li.dataset.idx = i;
-
-    var isDrive = leg.type === 'drive';
-    var iconChar = isDrive ? '&#x1F697;' : '&#x26F4;';
-    var badgeClass = isDrive ? 'leg-type-badge drive' : 'leg-type-badge ferry';
-    var badgeText = isDrive ? 'Køre' : 'Færge';
-
-    var priceRow = leg.type === 'ferry'
-      ? '<input type="number" class="price-input" value="' + (leg.price || 0) + '" min="0" step="50" data-field="price" data-idx="' + i + '">'
-        + '<span class="price-unit">kr T/R</span>'
-      : '';
-
-    var nameRow = leg.type === 'ferry'
-      ? '<input type="text" placeholder="Færgenavn (valgfrit)" value="' + esc(leg.name || '') + '" data-field="name" data-idx="' + i + '">'
-      : '';
-
-    li.innerHTML = [
-      '<span class="drag-handle" title="Træk for at omarrangere">&#9783;</span>',
-      '<div class="leg-icon ' + leg.type + '">' + iconChar + '</div>',
-      '<div class="leg-body">',
-        '<div class="leg-row"><span class="lbl">Fra</span>',
-          '<input type="text" value="' + esc(leg.from) + '" data-field="from" data-idx="' + i + '">',
-        '</div>',
-        '<div class="leg-row"><span class="lbl">Til</span>',
-          '<input type="text" value="' + esc(leg.to) + '" data-field="to" data-idx="' + i + '">',
-        '</div>',
-        leg.type === 'ferry' ? '<div class="leg-row"><span class="lbl"></span>' + nameRow + '</div>' : '',
-        '<div class="leg-meta">',
-          '<button class="' + badgeClass + '" data-toggle="' + i + '">' + badgeText + '</button>',
-          priceRow,
-        '</div>',
-      '</div>',
-      '<button class="leg-remove" data-remove="' + i + '" title="Fjern etape">&times;</button>'
-    ].join('');
-
-    el.appendChild(li);
-  });
-
-  el.querySelectorAll('input[data-field]').forEach(function(inp) {
-    inp.addEventListener('change', function() {
-      var idx = parseInt(this.dataset.idx, 10);
-      var field = this.dataset.field;
-      var val = this.type === 'number' ? (parseFloat(this.value) || 0) : this.value;
-      legs[idx][field] = val;
-      if (field === 'price') { recalc(); return; }
-      geocodeLegEndpoints(idx, function() { scheduleMapUpdate(); });
-    });
-  });
-
-  el.querySelectorAll('[data-toggle]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var idx = parseInt(this.dataset['toggle'], 10);
-      legs[idx].type = legs[idx].type === 'drive' ? 'ferry' : 'drive';
-      if (legs[idx].type === 'ferry' && !legs[idx].price) legs[idx].price = 0;
-      renderLegs();
-      scheduleMapUpdate();
-    });
-  });
-
-  el.querySelectorAll('[data-remove]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var idx = parseInt(this.dataset['remove'], 10);
-      legs.splice(idx, 1);
-      renderLegs();
-      scheduleMapUpdate();
-    });
-  });
-
-  el.querySelectorAll('.leg-item').forEach(function(item) {
-    item.addEventListener('dragstart', function(e) {
-      dragSrcIdx = parseInt(this.dataset.idx, 10);
-      this.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    item.addEventListener('dragend', function() {
-      this.classList.remove('dragging');
-      el.querySelectorAll('.leg-item').forEach(function(i) { i.classList.remove('drag-over'); });
-    });
-    item.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      el.querySelectorAll('.leg-item').forEach(function(i) { i.classList.remove('drag-over'); });
-      this.classList.add('drag-over');
-    });
-    item.addEventListener('drop', function(e) {
-      e.preventDefault();
-      var targetIdx = parseInt(this.dataset.idx, 10);
-      if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
-      var moved = legs.splice(dragSrcIdx, 1)[0];
-      legs.splice(targetIdx, 0, moved);
-      dragSrcIdx = null;
-      renderLegs();
-      scheduleMapUpdate();
-    });
-  });
-
-  recalc();
+  if (field === 'name') { leg.name = val; return; }
+  // from / to: reset coords, geocode
+  leg[field] = val;
+  leg[field === 'from' ? 'fromLat' : 'toLat'] = null;
+  leg[field === 'from' ? 'fromLon' : 'toLon'] = null;
+  route.geo = null;
+  geocodeLeg(leg, function() { scheduleUpdate(routeId); });
 }
 
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
-    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function setLang(lang) {
+  S.lang = lang;
+  localStorage.setItem('vjlang', lang);
+  renderLabels();
+  renderRoutes();
 }
 
-function addDriveLeg() {
-  legs.push({ type:'drive', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null });
-  renderLegs();
+function switchTab(tab) {
+  S.tab = tab;
+  renderLabels();
+  renderRoutes();
 }
 
-function addFerryLeg() {
-  legs.push({ type:'ferry', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null, name:'', price:0 });
-  renderLegs();
-}
+// ── EVENT DELEGATION ──────────────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+  // Preset buttons
+  var presetEl = e.target.closest('[data-preset]');
+  if (presetEl) { loadPreset(presetEl.dataset.preset); return; }
 
-// ── GEOCODING ────────────────────────────────────────────────────────────────
-function geocode(name, cb) {
-  var key = name.trim().toLowerCase();
-  if (!key) { cb(null, null); return; }
-  if (geocodeCache[key]) { cb(geocodeCache[key].lat, geocodeCache[key].lon); return; }
-  fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=1')
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d && d[0]) {
-        var lat = parseFloat(d[0].lat), lon = parseFloat(d[0].lon);
-        geocodeCache[key] = { lat:lat, lon:lon };
-        cb(lat, lon);
-      } else { cb(null, null); }
-    })
-    .catch(function() { cb(null, null); });
-}
+  // Walk up to nearest data-action element (handles clicks on children)
+  var actionEl = e.target.closest('[data-action]');
+  if (!actionEl) return;
 
-function geocodeLegEndpoints(idx, done) {
-  var leg = legs[idx];
-  var pending = 0;
-  function finish() { if (--pending === 0 && done) done(); }
+  var action = actionEl.dataset.action;
+  var rid    = actionEl.dataset.rid;
+  var idx    = actionEl.dataset.idx !== undefined ? parseInt(actionEl.dataset.idx, 10) : -1;
 
-  if (leg.from && leg.fromLat === null) {
-    pending++;
-    geocode(leg.from, function(lat, lon) { leg.fromLat = lat; leg.fromLon = lon; finish(); });
-  }
-  if (leg.to && leg.toLat === null) {
-    pending++;
-    geocode(leg.to, function(lat, lon) { leg.toLat = lat; leg.toLon = lon; finish(); });
-  }
-  if (pending === 0 && done) done();
-}
-
-// ── MAP ───────────────────────────────────────────────────────────────────────
-function initMap() {
-  map = L.map('map').setView([55.8, 11.5], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors', maxZoom: 18
-  }).addTo(map);
-  driveLayer = L.layerGroup().addTo(map);
-  ferryLayer = L.layerGroup().addTo(map);
-  markerLayer = L.layerGroup().addTo(map);
-}
-
-function scheduleMapUpdate() {
-  clearTimeout(updateTimer);
-  updateTimer = setTimeout(updateMap, 300);
-}
-
-function setStatus(msg) {
-  document.getElementById('status').textContent = msg;
-}
-
-async function updateMap() {
-  driveLayer.clearLayers();
-  ferryLayer.clearLayers();
-  markerLayer.clearLayers();
-  roadKm = 0;
-
-  if (legs.length === 0) { recalc(); setStatus('Ingen etaper.'); return; }
-
-  setStatus('Beregner rute...');
-  var allCoords = [];
-  var totalKm = 0;
-
-  for (var i = 0; i < legs.length; i++) {
-    var leg = legs[i];
-    if (!leg.fromLat || !leg.toLat) continue;
-
-    var fromLL = [leg.fromLat, leg.fromLon];
-    var toLL   = [leg.toLat,   leg.toLon];
-
-    if (i === 0) drawMarker(fromLL, leg.from, true);
-    drawMarker(toLL, leg.to, i === legs.length - 1);
-
-    allCoords.push(fromLL, toLL);
-
-    if (leg.type === 'ferry') {
-      L.polyline([fromLL, toLL], {
-        color: '#059669', weight: 2.5, dashArray: '7 5', opacity: 0.85
-      }).addTo(ferryLayer);
-    } else {
-      var coordStr = leg.fromLon + ',' + leg.fromLat + ';' + leg.toLon + ',' + leg.toLat;
-      try {
-        var resp = await fetch('https://router.project-osrm.org/route/v1/driving/' + coordStr + '?overview=full&geometries=geojson');
-        var data = await resp.json();
-        if (data.routes && data.routes[0]) {
-          totalKm += data.routes[0].distance / 1000;
-          var geo = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
-          allCoords = allCoords.concat(geo);
-          L.polyline(geo, { color: '#2563EB', weight: 3, opacity: 0.82 }).addTo(driveLayer);
-        }
-      } catch(e) {
-        L.polyline([fromLL, toLL], { color: '#2563EB', weight: 2, dashArray: '4 4', opacity: 0.4 }).addTo(driveLayer);
-      }
-    }
-  }
-
-  roadKm = Math.round(totalKm);
-
-  if (allCoords.length > 1) {
-    map.fitBounds(L.latLngBounds(allCoords), { padding: [32, 32] });
-  }
-
-  var parts = [];
-  if (roadKm > 0) parts.push('Vej: ' + roadKm + ' km én vej');
-  var fc = legs.filter(function(l) { return l.type === 'ferry'; }).length;
-  if (fc > 0) parts.push(fc + ' færgeoverfart' + (fc > 1 ? 'er' : '') + ' (tæller ikke i km)');
-  setStatus(parts.length ? parts.join('  |  ') : 'Færdig.');
-
-  recalc();
-}
-
-function drawMarker(ll, name, isEndpoint) {
-  var size = isEndpoint ? 13 : 9;
-  var icon = L.divIcon({
-    className: '',
-    html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;'
-        + 'background:#2563EB;border:2px solid #fff;'
-        + 'box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
-    iconSize: [size, size],
-    iconAnchor: [Math.floor(size/2), Math.floor(size/2)]
-  });
-  L.marker(ll, { icon: icon })
-    .bindTooltip(name || '', { direction: 'top', offset: [0, -8] })
-    .addTo(markerLayer);
-}
-
-// ── COST CALC ─────────────────────────────────────────────────────────────────
-function recalc() {
-  var cons   = parseFloat(document.getElementById('f-cons').value)  || 0;
-  var price  = parseFloat(document.getElementById('f-price').value) || 0;
-  var toll   = parseFloat(document.getElementById('f-toll').value)  || 0;
-  var mult   = parseInt(document.getElementById('f-trip').value, 10) || 2;
-
-  var ferryTotal = 0;
-  legs.forEach(function(l) { if (l.type === 'ferry') ferryTotal += (parseFloat(l.price) || 0); });
-
-  var kmTotal  = roadKm * mult;
-  var liters   = kmTotal * cons / 100;
-  var fuelCost = liters * price;
-  var total    = fuelCost + toll + ferryTotal;
-
-  function fmt(n) { return Math.round(n).toLocaleString('da-DK'); }
-
-  document.getElementById('s-km').textContent    = roadKm > 0   ? fmt(kmTotal)      : '--';
-  document.getElementById('s-l').textContent     = liters > 0   ? liters.toFixed(1) : '--';
-  document.getElementById('s-fuel').textContent  = fuelCost > 0 ? fmt(fuelCost)     : '--';
-  document.getElementById('s-ferry').textContent = fmt(ferryTotal);
-  document.getElementById('s-total').textContent = total > 0    ? fmt(total) + ' kr': '--';
-  document.getElementById('s-bd').textContent    = total > 0
-    ? 'Brændstof ' + fmt(fuelCost) + ' + Bro/vej ' + fmt(toll) + ' + Færger ' + fmt(ferryTotal) + ' kr'
-    : '';
-}
-
-// ── MOBILE MAP TOGGLE ─────────────────────────────────────────────────────────
-document.getElementById('btn-map-toggle').addEventListener('click', function() {
-  var col = document.getElementById('map-col');
-  var open = col.classList.toggle('open');
-  this.textContent = open ? 'Skjul kort ▴' : 'Vis kort ▾';
-  if (open) map.invalidateSize();
+  if (action === 'toggle')    { toggleRoute(rid); return; }
+  if (action === 'rename')    { return; } // handled by change event
+  if (action === 'delete')    { deleteRoute(rid); return; }
+  if (action === 'cycle')     { cycleLegType(rid, idx); return; }
+  if (action === 'addDrive')  { addLeg(rid, 'drive');  return; }
+  if (action === 'addFerry')  { addLeg(rid, 'ferry');  return; }
+  if (action === 'addBridge') { addLeg(rid, 'bridge'); return; }
+  if (action === 'removeLeg') { removeLeg(rid, idx);   return; }
 });
 
-// ── WIRE UP ───────────────────────────────────────────────────────────────────
-document.getElementById('btn-drive').addEventListener('click', addDriveLeg);
-document.getElementById('btn-ferry').addEventListener('click', addFerryLeg);
-
-document.querySelectorAll('[data-preset]').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var key = this.dataset.preset;
-    if (key === 'clear') clearAll(); else loadPreset(key);
-  });
+document.addEventListener('change', function(e) {
+  var el = e.target;
+  if (el.dataset.action === 'rename') {
+    var route = routeById(el.dataset.rid);
+    if (route) route.name = el.value;
+    return;
+  }
+  var field = el.dataset.field;
+  var rid   = el.dataset.rid;
+  var idx   = el.dataset.idx !== undefined ? parseInt(el.dataset.idx, 10) : -1;
+  if (field && rid && idx >= 0) updateLegField(rid, idx, field, el.value);
 });
 
-['f-cons','f-price','f-toll','f-trip'].forEach(function(id) {
-  document.getElementById(id).addEventListener('input', recalc);
-});
-
-initMap();
-loadPreset('dp');
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(function init() {
+  document.getElementById('f-cons').value  = S.cons;
+  document.getElementById('f-price').value = S.price;
+  renderLabels();
+  // Load default preset into outbound tab
+  loadPreset('dp');
+})();
 
 })();
 </script>
