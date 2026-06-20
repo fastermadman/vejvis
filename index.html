@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Route Cost Planner</title>
+<title>Vejvis</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -17,57 +17,70 @@
   --r: 6px; --r-sm: 4px;
 }
 html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; color: var(--gray-900); background: var(--gray-50); height: 100%; -webkit-text-size-adjust: 100%; }
-.layout { display: -webkit-flex; display: flex; height: 100vh; min-height: 560px; }
 
-/* SIDEBAR */
-.sidebar { width: 330px; min-width: 280px; background: #fff; border-right: var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; overflow: hidden; }
-.sidebar-head { padding: 14px 16px; border-bottom: var(--border); -webkit-flex-shrink: 0; flex-shrink: 0; }
+/* MOBILE FIRST */
+.layout { display: flex; flex-direction: column; min-height: 100vh; }
+.sidebar { width: 100%; background: #fff; border-bottom: var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-head { padding: 14px 16px; border-bottom: var(--border); flex-shrink: 0; }
 .sidebar-head h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 .sidebar-head p { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-.sidebar-scroll { -webkit-flex: 1; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sidebar-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.map-col { display: none; flex-direction: column; }
+.map-col.open { display: flex; }
+#map { height: 55vmax; min-height: 260px; }
+.btn-map-toggle { width: 100%; padding: 10px 16px; font-size: 13px; font-family: inherit; background: var(--gray-50); border: none; border-top: var(--border); color: var(--blue); font-weight: 500; cursor: pointer; text-align: center; }
+
+/* DESKTOP */
+@media (min-width: 640px) {
+  .layout { flex-direction: row; height: 100vh; }
+  .sidebar { width: 330px; min-width: 280px; border-right: var(--border); border-bottom: none; }
+  .map-col { display: flex !important; flex: 1; min-width: 0; }
+  #map { height: auto; flex: 1; }
+  .btn-map-toggle { display: none; }
+}
+
 .section { padding: 12px 16px; border-bottom: var(--border); }
 .sec-label { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
 
 /* VEHICLE INPUTS */
-.field-grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; gap: 6px; }
-.field { -webkit-flex: 1; flex: 1; min-width: 110px; }
+.field-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.field { flex: 1; min-width: 110px; }
 .field label { display: block; font-size: 11px; color: var(--gray-600); margin-bottom: 3px; }
 .field input, .field select { display: block; width: 100%; padding: 6px 8px; font-size: 13px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); -webkit-appearance: none; appearance: none; outline: none; }
 .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
 
 /* LEG LIST */
 .leg-list { list-style: none; }
-.leg-item { position: relative; display: -webkit-flex; display: flex; -webkit-align-items: flex-start; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); cursor: default; -webkit-user-select: none; user-select: none; }
+.leg-item { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); cursor: default; user-select: none; }
 .leg-item:last-child { border-bottom: none; }
 .leg-item.dragging { opacity: .4; }
 .leg-item.drag-over { border-top: 2px solid var(--blue); }
 
-.drag-handle { color: var(--gray-400); font-size: 15px; cursor: grab; padding: 3px 0; -webkit-flex-shrink: 0; flex-shrink: 0; line-height: 1; margin-top: 4px; }
+.drag-handle { color: var(--gray-400); font-size: 15px; cursor: grab; padding: 3px 0; flex-shrink: 0; line-height: 1; margin-top: 4px; }
 .drag-handle:active { cursor: grabbing; }
 
-.leg-icon { width: 28px; height: 28px; border-radius: 50%; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; -webkit-flex-shrink: 0; flex-shrink: 0; margin-top: 1px; font-size: 13px; }
+.leg-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 13px; }
 .leg-icon.drive { background: var(--blue-lt); }
 .leg-icon.ferry { background: var(--green-lt); }
 
-.leg-body { -webkit-flex: 1; flex: 1; min-width: 0; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; gap: 4px; }
-
-.leg-row { display: -webkit-flex; display: flex; gap: 4px; -webkit-align-items: center; align-items: center; }
-.leg-row .lbl { font-size: 10px; color: var(--gray-400); width: 28px; -webkit-flex-shrink: 0; flex-shrink: 0; }
-.leg-row input[type="text"] { -webkit-flex: 1; flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); outline: none; }
+.leg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.leg-row { display: flex; gap: 4px; align-items: center; }
+.leg-row .lbl { font-size: 10px; color: var(--gray-400); width: 28px; flex-shrink: 0; }
+.leg-row input[type="text"] { flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); outline: none; }
 .leg-row input[type="text"]:focus { border-color: var(--blue); }
 
-.leg-meta { display: -webkit-flex; display: flex; gap: 4px; -webkit-align-items: center; align-items: center; }
-.leg-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; border: 1px solid; cursor: pointer; -webkit-flex-shrink: 0; flex-shrink: 0; -webkit-appearance: none; background: none; font-family: inherit; }
+.leg-meta { display: flex; gap: 4px; align-items: center; }
+.leg-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; border: 1px solid; cursor: pointer; flex-shrink: 0; -webkit-appearance: none; background: none; font-family: inherit; }
 .leg-type-badge.drive { color: var(--blue); border-color: #BFDBFE; background: var(--blue-lt); }
 .leg-type-badge.ferry { color: var(--green); border-color: #6EE7B7; background: var(--green-lt); }
 .price-input { width: 70px; padding: 3px 6px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-900); -webkit-appearance: none; outline: none; }
 .price-unit { font-size: 10px; color: var(--gray-400); }
 
-.leg-remove { background: none; border: none; color: var(--gray-300); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; -webkit-flex-shrink: 0; flex-shrink: 0; -webkit-appearance: none; margin-top: 2px; }
+.leg-remove { background: none; border: none; color: var(--gray-300); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; flex-shrink: 0; -webkit-appearance: none; margin-top: 2px; }
 .leg-remove:hover { color: var(--red); }
 
 /* ADD LEG */
-.add-section { padding: 10px 16px; border-bottom: var(--border); display: -webkit-flex; display: flex; gap: 6px; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.add-section { padding: 10px 16px; border-bottom: var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
 .btn { padding: 6px 12px; font-size: 12px; font-family: inherit; border: var(--border); border-radius: var(--r-sm); background: #fff; color: var(--gray-600); cursor: pointer; -webkit-appearance: none; white-space: nowrap; }
 .btn:hover { background: var(--gray-100); }
 .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
@@ -75,33 +88,31 @@ html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helveti
 .btn.small { padding: 4px 10px; font-size: 11px; }
 
 .preset-section { padding: 10px 16px; border-bottom: var(--border); }
-.preset-row { display: -webkit-flex; display: flex; gap: 5px; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.preset-row { display: flex; gap: 5px; flex-wrap: wrap; }
 
 /* STATS */
 .stats-section { padding: 12px 16px; }
-.stat-grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; gap: 6px; }
-.stat { -webkit-flex: 1; flex: 1; min-width: 100px; background: var(--gray-50); border: var(--border); border-radius: var(--r-sm); padding: 8px 10px; }
+.stat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.stat { flex: 1; min-width: 100px; background: var(--gray-50); border: var(--border); border-radius: var(--r-sm); padding: 8px 10px; }
 .stat-lbl { font-size: 10px; color: var(--gray-400); margin-bottom: 2px; }
 .stat-val { font-size: 19px; font-weight: 600; color: var(--gray-900); line-height: 1.15; }
 .stat-unit { font-size: 10px; color: var(--gray-400); }
 
 /* TOTAL */
-.total-bar { padding: 12px 16px; background: #fff; border-top: var(--border); -webkit-flex-shrink: 0; flex-shrink: 0; }
-.total-row { display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between; -webkit-align-items: baseline; align-items: baseline; }
+.total-bar { padding: 12px 16px; background: #fff; border-top: var(--border); flex-shrink: 0; }
+.total-row { display: flex; justify-content: space-between; align-items: baseline; }
 .total-lbl { font-size: 12px; color: var(--gray-600); }
 .total-val { font-size: 26px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.02em; }
 .total-bd { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
 
 /* MAP */
-.map-col { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-width: 0; }
-#map { -webkit-flex: 1; flex: 1; min-height: 300px; }
-.map-foot { padding: 7px 12px; font-size: 11px; color: var(--gray-400); background: #fff; border-top: var(--border); -webkit-flex-shrink: 0; flex-shrink: 0; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; gap: 12px; }
-.legend { display: -webkit-flex; display: flex; gap: 12px; }
-.legend-item { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; gap: 5px; font-size: 11px; color: var(--gray-600); }
+.map-foot { padding: 7px 12px; font-size: 11px; color: var(--gray-400); background: #fff; border-top: var(--border); flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
+.legend { display: flex; gap: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray-600); }
 .legend-line { width: 22px; height: 2px; }
 .legend-line.road { background: var(--blue); }
 .legend-line.ferry { background: repeating-linear-gradient(90deg, #059669 0, #059669 5px, transparent 5px, transparent 9px); }
-#status { -webkit-flex: 1; flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#status { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -111,32 +122,32 @@ html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helveti
   <div class="sidebar">
     <div class="sidebar-head">
       <h1>Vejvis</h1>
-      <p>Road + ferry trip cost calculator</p>
+      <p>Beregn rejseomkostninger til Bornholm</p>
     </div>
 
     <div class="sidebar-scroll">
 
       <!-- Vehicle -->
       <div class="section">
-        <div class="sec-label">Vehicle &amp; fuel</div>
+        <div class="sec-label">Køretøj &amp; brændstof</div>
         <div class="field-grid">
           <div class="field">
-            <label for="f-cons">Consumption (L/100 km)</label>
+            <label for="f-cons">Forbrug (L/100 km)</label>
             <input type="number" id="f-cons" value="6.5" min="1" max="30" step="0.1">
           </div>
           <div class="field">
-            <label for="f-price">Fuel price (kr/L)</label>
+            <label for="f-price">Brændstofpris (kr/L)</label>
             <input type="number" id="f-price" value="17" min="1" max="50" step="0.5">
           </div>
           <div class="field">
-            <label for="f-toll">Toll / bridge (kr)</label>
+            <label for="f-toll">Bro / vejafgift (kr)</label>
             <input type="number" id="f-toll" value="0" min="0" step="10">
           </div>
           <div class="field">
-            <label for="f-trip">Trip</label>
+            <label for="f-trip">Tur</label>
             <select id="f-trip">
-              <option value="2">Round trip</option>
-              <option value="1">One way</option>
+              <option value="2">Tur/retur</option>
+              <option value="1">Enkelttur</option>
             </select>
           </div>
         </div>
@@ -144,48 +155,48 @@ html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helveti
 
       <!-- Presets -->
       <div class="preset-section">
-        <div class="sec-label">Load preset</div>
+        <div class="sec-label">Forudindstillinger</div>
         <div class="preset-row">
-          <button class="btn small" data-preset="dp">D+ (4 ferries)</button>
-          <button class="btn small" data-preset="b">B (Koege)</button>
-          <button class="btn small" data-preset="a">A (Ystad, bridge)</button>
-          <button class="btn small" data-preset="clear">Clear all</button>
+          <button class="btn small" data-preset="dp">D+ (4 færger)</button>
+          <button class="btn small" data-preset="b">B (Køge)</button>
+          <button class="btn small" data-preset="a">A (Ystad, bro)</button>
+          <button class="btn small" data-preset="clear">Ryd</button>
         </div>
       </div>
 
       <!-- Legs -->
       <div class="section">
-        <div class="sec-label">Route legs</div>
+        <div class="sec-label">Etaper</div>
         <ul class="leg-list" id="leg-list"></ul>
       </div>
 
       <!-- Add leg -->
       <div class="add-section">
-        <button class="btn primary" id="btn-drive">+ Drive leg</button>
-        <button class="btn" id="btn-ferry">+ Ferry crossing</button>
+        <button class="btn primary" id="btn-drive">+ Køre-etape</button>
+        <button class="btn" id="btn-ferry">+ Færgeoverfart</button>
       </div>
 
       <!-- Stats -->
       <div class="stats-section">
-        <div class="sec-label">Cost breakdown</div>
+        <div class="sec-label">Omkostningsoversigt</div>
         <div class="stat-grid">
           <div class="stat">
-            <div class="stat-lbl">Road km (total)</div>
+            <div class="stat-lbl">Vejkm (total)</div>
             <div class="stat-val" id="s-km">--</div>
             <div class="stat-unit">km</div>
           </div>
           <div class="stat">
-            <div class="stat-lbl">Fuel used</div>
+            <div class="stat-lbl">Brændstof brugt</div>
             <div class="stat-val" id="s-l">--</div>
-            <div class="stat-unit">litres</div>
+            <div class="stat-unit">liter</div>
           </div>
           <div class="stat">
-            <div class="stat-lbl">Fuel cost</div>
+            <div class="stat-lbl">Brændstofomk.</div>
             <div class="stat-val" id="s-fuel">--</div>
             <div class="stat-unit">kr</div>
           </div>
           <div class="stat">
-            <div class="stat-lbl">Ferries total</div>
+            <div class="stat-lbl">Færger i alt</div>
             <div class="stat-val" id="s-ferry">--</div>
             <div class="stat-unit">kr</div>
           </div>
@@ -196,22 +207,24 @@ html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helveti
 
     <div class="total-bar">
       <div class="total-row">
-        <span class="total-lbl">Total cost</span>
+        <span class="total-lbl">Total</span>
         <span class="total-val" id="s-total">--</span>
       </div>
       <div class="total-bd" id="s-bd"></div>
     </div>
+
+    <button class="btn-map-toggle" id="btn-map-toggle">Vis kort ▾</button>
   </div>
 
   <!-- MAP -->
-  <div class="map-col">
+  <div class="map-col" id="map-col">
     <div id="map"></div>
     <div class="map-foot">
       <div class="legend">
-        <div class="legend-item"><div class="legend-line road"></div>Road (OSRM)</div>
-        <div class="legend-item"><div class="legend-line ferry"></div>Ferry</div>
+        <div class="legend-item"><div class="legend-line road"></div>Vej (OSRM)</div>
+        <div class="legend-item"><div class="legend-line ferry"></div>Færge</div>
       </div>
-      <div id="status">Load a preset to begin.</div>
+      <div id="status">Vælg en forudindstilling for at starte.</div>
     </div>
   </div>
 
@@ -221,6 +234,15 @@ html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helveti
 (function () {
 'use strict';
 
+/* ── DATA MODEL ──────────────────────────────────────────────────────────────
+   A route is a list of LEGS. Each leg is either:
+     { type:'drive', from:'Name', fromLat, fromLon, to:'Name', toLat, toLon }
+     { type:'ferry', from:'Name', fromLat, fromLon, to:'Name', toLat, toLon,
+                     name:'Ferry name', price: 0 }
+   OSRM is only called for drive legs.
+   Ferry legs are drawn as straight dashed lines, price added to total.
+*/
+
 var legs = [];
 var roadKm = 0;
 var map, driveLayer, ferryLayer, markerLayer;
@@ -228,31 +250,43 @@ var geocodeCache = {};
 var updateTimer = null;
 var dragSrcIdx = null;
 
+// ── PRESETS ──────────────────────────────────────────────────────────────────
 var PRESETS = {
-  dp: { toll: 0, legs: [
-    { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Aarhus ferry terminal', toLat:56.1497, toLon:10.2195 },
-    { type:'ferry', from:'Aarhus', fromLat:56.1497, fromLon:10.2195, to:'Odden', toLat:55.977, toLon:11.301, name:'Molslinjen Aarhus-Odden', price:1198 },
-    { type:'drive', from:'Odden', fromLat:55.977, fromLon:11.301, to:'Roervig ferry', toLat:55.945, toLon:11.767 },
-    { type:'ferry', from:'Roervig', fromLat:55.945, fromLon:11.767, to:'Hundested', toLat:55.966, toLon:11.845, name:'Roervig-Hundested', price:330 },
-    { type:'drive', from:'Hundested', fromLat:55.966, fromLon:11.845, to:'Helsingoer ferry', toLat:56.033, toLon:12.617 },
-    { type:'ferry', from:'Helsingoer', fromLat:56.033, fromLon:12.617, to:'Helsingborg', toLat:56.046, toLon:12.695, name:'Oresundslinjen HH', price:598 },
-    { type:'drive', from:'Helsingborg', fromLat:56.046, fromLon:12.695, to:'Ystad ferry terminal', toLat:55.425, toLon:13.829 },
-    { type:'ferry', from:'Ystad', fromLat:55.425, fromLon:13.829, to:'Roenne', toLat:55.101, toLon:14.708, name:'Bornholmslinjen Ystad-Roenne', price:1198 }
-  ]},
-  b: { toll: 410, legs: [
-    { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Koege ferry terminal', toLat:55.459, toLon:12.185 },
-    { type:'ferry', from:'Koege', fromLat:55.459, fromLon:12.185, to:'Roenne', toLat:55.101, toLon:14.708, name:'Bornholmslinjen Koege-Roenne', price:1198 }
-  ]},
-  a: { toll: 1180, legs: [
-    { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Ystad ferry terminal', toLat:55.425, toLon:13.829 },
-    { type:'ferry', from:'Ystad', fromLat:55.425, fromLon:13.829, to:'Roenne', toLat:55.101, toLon:14.708, name:'Bornholmslinjen Ystad-Roenne', price:1198 }
-  ]}
+  dp: {
+    toll: 0,
+    legs: [
+      { type:'drive', from:'Silkeborg',          fromLat:56.1684, fromLon:9.5733,  to:'Aarhus færgeterminal', toLat:56.1497, toLon:10.2195 },
+      { type:'ferry', from:'Aarhus',             fromLat:56.1497, fromLon:10.2195, to:'Odden',                toLat:55.977,  toLon:11.301,  name:'Molslinjen Aarhus-Odden',    price:1198 },
+      { type:'drive', from:'Odden',              fromLat:55.977,  fromLon:11.301,  to:'Rørvig færge',         toLat:55.945,  toLon:11.767 },
+      { type:'ferry', from:'Rørvig',             fromLat:55.945,  fromLon:11.767,  to:'Hundested',            toLat:55.966,  toLon:11.845,  name:'Rørvig-Hundested',           price:330  },
+      { type:'drive', from:'Hundested',          fromLat:55.966,  fromLon:11.845,  to:'Helsingør færge',      toLat:56.033,  toLon:12.617 },
+      { type:'ferry', from:'Helsingør',          fromLat:56.033,  fromLon:12.617,  to:'Helsingborg',          toLat:56.046,  toLon:12.695,  name:'Øresundslinjen HH',          price:598  },
+      { type:'drive', from:'Helsingborg',        fromLat:56.046,  fromLon:12.695,  to:'Ystad færgeterminal',  toLat:55.425,  toLon:13.829 },
+      { type:'ferry', from:'Ystad',              fromLat:55.425,  fromLon:13.829,  to:'Rønne',                toLat:55.101,  toLon:14.708,  name:'Bornholmslinjen Ystad-Rønne', price:1198 }
+    ]
+  },
+  b: {
+    toll: 410,
+    legs: [
+      { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Køge færgeterminal', toLat:55.459, toLon:12.185 },
+      { type:'ferry', from:'Køge',      fromLat:55.459,  fromLon:12.185, to:'Rønne',              toLat:55.101, toLon:14.708, name:'Bornholmslinjen Køge-Rønne', price:1198 }
+    ]
+  },
+  a: {
+    toll: 1180,
+    legs: [
+      { type:'drive', from:'Silkeborg', fromLat:56.1684, fromLon:9.5733, to:'Ystad færgeterminal', toLat:55.425, toLon:13.829 },
+      { type:'ferry', from:'Ystad',     fromLat:55.425,  fromLon:13.829, to:'Rønne',               toLat:55.101, toLon:14.708, name:'Bornholmslinjen Ystad-Rønne', price:1198 }
+    ]
+  }
 };
 
-function cloneLegs(src) { return src.map(function(l) { return Object.assign({}, l); }); }
+function cloneLegs(src) {
+  return src.map(function(l) { return Object.assign({}, l); });
+}
 
 function loadPreset(key) {
-  var p = PRESETSAey];
+  var p = PRESETS[key];
   if (!p) return;
   legs = cloneLegs(p.legs);
   document.getElementById('f-toll').value = p.toll;
@@ -261,96 +295,146 @@ function loadPreset(key) {
 }
 
 function clearAll() {
-  legs = []; roadKm = 0;
+  legs = [];
+  roadKm = 0;
   renderLegs();
-  driveLayer.clearLayers(); ferryLayer.clearLayers(); markerLayer.clearLayers();
-  recalc(); setStatus('Cleared.');
+  driveLayer.clearLayers();
+  ferryLayer.clearLayers();
+  markerLayer.clearLayers();
+  recalc();
+  setStatus('Ryddet.');
 }
 
+// ── RENDER LEG LIST ───────────────────────────────────────────────────────────
 function renderLegs() {
   var el = document.getElementById('leg-list');
   if (legs.length === 0) {
-    el.innerHTML = '<li style="padding:10px 0;font-size:12px;color:#9CA3AF;">No legs yet. Add a drive leg or ferry crossing.</li>';
-    recalc(); return;
+    el.innerHTML = '<li style="padding:10px 0;font-size:12px;color:#9CA3AF;">Ingen etaper endnu. Tilføj en køre-etape eller færgeoverfart.</li>';
+    recalc();
+    return;
   }
+
   el.innerHTML = '';
   legs.forEach(function(leg, i) {
     var li = document.createElement('li');
     li.className = 'leg-item';
     li.setAttribute('draggable', 'true');
     li.dataset.idx = i;
+
     var isDrive = leg.type === 'drive';
     var iconChar = isDrive ? '&#x1F697;' : '&#x26F4;';
     var badgeClass = isDrive ? 'leg-type-badge drive' : 'leg-type-badge ferry';
+    var badgeText = isDrive ? 'Køre' : 'Færge';
+
     var priceRow = leg.type === 'ferry'
-      ? '<input type="number" class="price-input" value="' + (leg.price || 0) + '" min="0" step="50" data-field="price" data-idx="' + i + '"><span class="price-unit">kr RT</span>'
+      ? '<input type="number" class="price-input" value="' + (leg.price || 0) + '" min="0" step="50" data-field="price" data-idx="' + i + '">'
+        + '<span class="price-unit">kr T/R</span>'
       : '';
+
     var nameRow = leg.type === 'ferry'
-      ? '<input type="text" placeholder="Ferry name" value="' + esc(leg.name || '') + '" data-field="name" data-idx="' + i + '">'
+      ? '<input type="text" placeholder="Færgenavn (valgfrit)" value="' + esc(leg.name || '') + '" data-field="name" data-idx="' + i + '">'
       : '';
-    li.innerHTML = '<span class="drag-handle">&#9783;</span>'
-      + '<div class="leg-icon ' + leg.type + '">' + iconChar + '</div>'
-      + '<div class="leg-body">'
-      + '<div class="leg-row"><span class="lbl">From</span><input type="text" value="' + esc(leg.from) + '" data-field="from" data-idx="' + i + '"></div>'
-      + '<div class="leg-row"><span class="lbl">To</span><input type="text" value="' + esc(leg.to) + '" data-field="to" data-idx="' + i + '"></div>'
-      + (leg.type === 'ferry' ? '<div class="leg-row"><span class="lbl"></span>' + nameRow + '</div>' : '')
-      + '<div class="leg-meta"><button class="' + badgeClass + '" data-toggle="' + i + '">' + (isDrive ? 'Drive' : 'Ferry') + '</button>' + priceRow + '</div>'
-      + '</div>'
-      + '<button class="leg-remove" data-remove="' + i + '">&times;</button>';
+
+    li.innerHTML = [
+      '<span class="drag-handle" title="Træk for at omarrangere">&#9783;</span>',
+      '<div class="leg-icon ' + leg.type + '">' + iconChar + '</div>',
+      '<div class="leg-body">',
+        '<div class="leg-row"><span class="lbl">Fra</span>',
+          '<input type="text" value="' + esc(leg.from) + '" data-field="from" data-idx="' + i + '">',
+        '</div>',
+        '<div class="leg-row"><span class="lbl">Til</span>',
+          '<input type="text" value="' + esc(leg.to) + '" data-field="to" data-idx="' + i + '">',
+        '</div>',
+        leg.type === 'ferry' ? '<div class="leg-row"><span class="lbl"></span>' + nameRow + '</div>' : '',
+        '<div class="leg-meta">',
+          '<button class="' + badgeClass + '" data-toggle="' + i + '">' + badgeText + '</button>',
+          priceRow,
+        '</div>',
+      '</div>',
+      '<button class="leg-remove" data-remove="' + i + '" title="Fjern etape">&times;</button>'
+    ].join('');
+
     el.appendChild(li);
   });
+
   el.querySelectorAll('input[data-field]').forEach(function(inp) {
     inp.addEventListener('change', function() {
-      var idx = parseInt(this.dataset.idx, 10), field = this.dataset.field;
+      var idx = parseInt(this.dataset.idx, 10);
+      var field = this.dataset.field;
       var val = this.type === 'number' ? (parseFloat(this.value) || 0) : this.value;
       legs[idx][field] = val;
       if (field === 'price') { recalc(); return; }
       geocodeLegEndpoints(idx, function() { scheduleMapUpdate(); });
     });
   });
+
   el.querySelectorAll('[data-toggle]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var idx = parseInt(this.dataset['toggle'], 10);
       legs[idx].type = legs[idx].type === 'drive' ? 'ferry' : 'drive';
       if (legs[idx].type === 'ferry' && !legs[idx].price) legs[idx].price = 0;
-      renderLegs(); scheduleMapUpdate();
+      renderLegs();
+      scheduleMapUpdate();
     });
   });
+
   el.querySelectorAll('[data-remove]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      legs.splice(parseInt(this.dataset['remove'], 10), 1);
-      renderLegs(); scheduleMapUpdate();
+      var idx = parseInt(this.dataset['remove'], 10);
+      legs.splice(idx, 1);
+      renderLegs();
+      scheduleMapUpdate();
     });
   });
+
   el.querySelectorAll('.leg-item').forEach(function(item) {
     item.addEventListener('dragstart', function(e) {
-      dragSrcIdx = parseInt(this.dataset.idx, 10); this.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+      dragSrcIdx = parseInt(this.dataset.idx, 10);
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
     });
     item.addEventListener('dragend', function() {
       this.classList.remove('dragging');
       el.querySelectorAll('.leg-item').forEach(function(i) { i.classList.remove('drag-over'); });
     });
     item.addEventListener('dragover', function(e) {
-      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
       el.querySelectorAll('.leg-item').forEach(function(i) { i.classList.remove('drag-over'); });
       this.classList.add('drag-over');
     });
     item.addEventListener('drop', function(e) {
       e.preventDefault();
-      var t = parseInt(this.dataset.idx, 10);
-      if (dragSrcIdx === null || dragSrcIdx === t) return;
+      var targetIdx = parseInt(this.dataset.idx, 10);
+      if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
       var moved = legs.splice(dragSrcIdx, 1)[0];
-      legs.splice(t, 0, moved); dragSrcIdx = null;
-      renderLegs(); scheduleMapUpdate();
+      legs.splice(targetIdx, 0, moved);
+      dragSrcIdx = null;
+      renderLegs();
+      scheduleMapUpdate();
     });
   });
+
   recalc();
 }
 
 function esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function addDriveLeg() {
+  legs.push({ type:'drive', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null });
+  renderLegs();
+}
+
+function addFerryLeg() {
+  legs.push({ type:'ferry', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null, name:'', price:0 });
+  renderLegs();
+}
+
+// ── GEOCODING ────────────────────────────────────────────────────────────────
 function geocode(name, cb) {
   var key = name.trim().toLowerCase();
   if (!key) { cb(null, null); return; }
@@ -358,49 +442,83 @@ function geocode(name, cb) {
   fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=1')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d && d[0]) { var l = { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) }; geocodeCache[key] = l; cb(l.lat, l.lon); }
-      else cb(null, null);
-    }).catch(function() { cb(null, null); });
+      if (d && d[0]) {
+        var lat = parseFloat(d[0].lat), lon = parseFloat(d[0].lon);
+        geocodeCache[key] = { lat:lat, lon:lon };
+        cb(lat, lon);
+      } else { cb(null, null); }
+    })
+    .catch(function() { cb(null, null); });
 }
 
 function geocodeLegEndpoints(idx, done) {
-  var leg = legs[idx], pending = 0;
+  var leg = legs[idx];
+  var pending = 0;
   function finish() { if (--pending === 0 && done) done(); }
-  if (leg.from && leg.fromLat === null) { pending++; geocode(leg.from, function(lat, lon) { leg.fromLat = lat; leg.fromLon = lon; finish(); }); }
-  if (leg.to && leg.toLat === null) { pending++; geocode(leg.to, function(lat, lon) { leg.toLat = lat; leg.toLon = lon; finish(); }); }
+
+  if (leg.from && leg.fromLat === null) {
+    pending++;
+    geocode(leg.from, function(lat, lon) { leg.fromLat = lat; leg.fromLon = lon; finish(); });
+  }
+  if (leg.to && leg.toLat === null) {
+    pending++;
+    geocode(leg.to, function(lat, lon) { leg.toLat = lat; leg.toLon = lon; finish(); });
+  }
   if (pending === 0 && done) done();
 }
 
+// ── MAP ───────────────────────────────────────────────────────────────────────
 function initMap() {
   map = L.map('map').setView([55.8, 11.5], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '\u00a9 OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 18
+  }).addTo(map);
   driveLayer = L.layerGroup().addTo(map);
   ferryLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
 }
 
-function scheduleMapUpdate() { clearTimeout(updateTimer); updateTimer = setTimeout(updateMap, 300); }
-function setStatus(msg) { document.getElementById('status').textContent = msg; }
+function scheduleMapUpdate() {
+  clearTimeout(updateTimer);
+  updateTimer = setTimeout(updateMap, 300);
+}
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
 
 async function updateMap() {
-  driveLayer.clearLayers(); ferryLayer.clearLayers(); markerLayer.clearLayers();
+  driveLayer.clearLayers();
+  ferryLayer.clearLayers();
+  markerLayer.clearLayers();
   roadKm = 0;
-  if (legs.length === 0) { recalc(); setStatus('No legs.'); return; }
-  setStatus('Routing...');
-  var allCoords = [], totalKm = 0;
+
+  if (legs.length === 0) { recalc(); setStatus('Ingen etaper.'); return; }
+
+  setStatus('Beregner rute...');
+  var allCoords = [];
+  var totalKm = 0;
+
   for (var i = 0; i < legs.length; i++) {
     var leg = legs[i];
     if (!leg.fromLat || !leg.toLat) continue;
-    var fLL = [leg.fromLat, leg.fromLon], tLL = [leg.toLat, leg.toLon];
-    if (i === 0) drawMarker(fLL, leg.from, true);
-    drawMarker(tLL, leg.to, i === legs.length - 1);
-    allCoords.push(fLL, tLL);
+
+    var fromLL = [leg.fromLat, leg.fromLon];
+    var toLL   = [leg.toLat,   leg.toLon];
+
+    if (i === 0) drawMarker(fromLL, leg.from, true);
+    drawMarker(toLL, leg.to, i === legs.length - 1);
+
+    allCoords.push(fromLL, toLL);
+
     if (leg.type === 'ferry') {
-      L.polyline([fLL, tLL], { color: '#059669', weight: 2.5, dashArray: '7 5', opacity: 0.85 }).addTo(ferryLayer);
+      L.polyline([fromLL, toLL], {
+        color: '#059669', weight: 2.5, dashArray: '7 5', opacity: 0.85
+      }).addTo(ferryLayer);
     } else {
-      var cs = leg.fromLon + ',' + leg.fromLat + ';' + leg.toLon + ',' + leg.toLat;
+      var coordStr = leg.fromLon + ',' + leg.fromLat + ';' + leg.toLon + ',' + leg.toLat;
       try {
-        var resp = await fetch('https://router.project-osrm.org/route/v1/driving/' + cs + '?overview=full&geometries=geojson');
+        var resp = await fetch('https://router.project-osrm.org/route/v1/driving/' + coordStr + '?overview=full&geometries=geojson');
         var data = await resp.json();
         if (data.routes && data.routes[0]) {
           totalKm += data.routes[0].distance / 1000;
@@ -409,42 +527,79 @@ async function updateMap() {
           L.polyline(geo, { color: '#2563EB', weight: 3, opacity: 0.82 }).addTo(driveLayer);
         }
       } catch(e) {
-        L.polyline([fLL, tLL], { color: '#2563EB', weight: 2, dashArray: '4 4', opacity: 0.4 }).addTo(driveLayer);
+        L.polyline([fromLL, toLL], { color: '#2563EB', weight: 2, dashArray: '4 4', opacity: 0.4 }).addTo(driveLayer);
       }
     }
   }
+
   roadKm = Math.round(totalKm);
-  if (allCoords.length > 1) map.fitBounds(L.latLngBounds(allCoords), { padding: [32, 32] });
+
+  if (allCoords.length > 1) {
+    map.fitBounds(L.latLngBounds(allCoords), { padding: [32, 32] });
+  }
+
+  var parts = [];
+  if (roadKm > 0) parts.push('Vej: ' + roadKm + ' km én vej');
   var fc = legs.filter(function(l) { return l.type === 'ferry'; }).length;
-  setStatus((roadKm > 0 ? 'Road: ' + roadKm + ' km one way ' : '') + (fc > 0 ? '  |  ' + fc + ' ferry crossing' + (fc > 1 ? 's' : '') + ' (not counted in km)' : ''));
+  if (fc > 0) parts.push(fc + ' færgeoverfart' + (fc > 1 ? 'er' : '') + ' (tæller ikke i km)');
+  setStatus(parts.length ? parts.join('  |  ') : 'Færdig.');
+
   recalc();
 }
 
 function drawMarker(ll, name, isEndpoint) {
   var size = isEndpoint ? 13 : 9;
-  var icon = L.divIcon({ className: '', html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:#2563EB;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>', iconSize: [size, size], iconAnchor: [Math.floor(size/2), Math.floor(size/2)] });
-  L.marker(ll, { icon: icon }).bindTooltip(name || '', { direction: 'top', offset: [0, -8] }).addTo(markerLayer);
+  var icon = L.divIcon({
+    className: '',
+    html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;'
+        + 'background:#2563EB;border:2px solid #fff;'
+        + 'box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
+    iconSize: [size, size],
+    iconAnchor: [Math.floor(size/2), Math.floor(size/2)]
+  });
+  L.marker(ll, { icon: icon })
+    .bindTooltip(name || '', { direction: 'top', offset: [0, -8] })
+    .addTo(markerLayer);
 }
 
+// ── COST CALC ─────────────────────────────────────────────────────────────────
 function recalc() {
-  var cons = parseFloat(document.getElementById('f-cons').value) || 0;
-  var price = parseFloat(document.getElementById('f-price').value) || 0;
-  var toll = parseFloat(document.getElementById('f-toll').value) || 0;
-  var mult = parseInt(document.getElementById('f-trip').value, 10) || 2;
+  var cons   = parseFloat(document.getElementById('f-cons').value)  || 0;
+  var price  = parseFloat(document.getElementById('f-price').value) || 0;
+  var toll   = parseFloat(document.getElementById('f-toll').value)  || 0;
+  var mult   = parseInt(document.getElementById('f-trip').value, 10) || 2;
+
   var ferryTotal = 0;
   legs.forEach(function(l) { if (l.type === 'ferry') ferryTotal += (parseFloat(l.price) || 0); });
-  var kmT = roadKm * mult, liters = kmT * cons / 100, fuelCost = liters * price, total = fuelCost + toll + ferryTotal;
-  function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
-  document.getElementById('s-km').textContent = roadKm > 0 ? fmt(kmT) : '--';
-  document.getElementById('s-l').textContent = liters > 0 ? liters.toFixed(1) : '--';
-  document.getElementById('s-fuel').textContent = fuelCost 8 0 ? fmt(fuelCost) : '--';
+
+  var kmTotal  = roadKm * mult;
+  var liters   = kmTotal * cons / 100;
+  var fuelCost = liters * price;
+  var total    = fuelCost + toll + ferryTotal;
+
+  function fmt(n) { return Math.round(n).toLocaleString('da-DK'); }
+
+  document.getElementById('s-km').textContent    = roadKm > 0   ? fmt(kmTotal)      : '--';
+  document.getElementById('s-l').textContent     = liters > 0   ? liters.toFixed(1) : '--';
+  document.getElementById('s-fuel').textContent  = fuelCost > 0 ? fmt(fuelCost)     : '--';
   document.getElementById('s-ferry').textContent = fmt(ferryTotal);
-  document.getElementById('s-total').textContent = total > 0 ? fmt(total) + ' kr' : '--';
-  document.getElementById('s-bd').textContent = total > 0 ? 'Fuel ' + fmt(fuelCost) + ' + Toll ' + fmt(toll) + ' + Ferries ' + fmt(ferryTotal) + ' kr' : '';
+  document.getElementById('s-total').textContent = total > 0    ? fmt(total) + ' kr': '--';
+  document.getElementById('s-bd').textContent    = total > 0
+    ? 'Brændstof ' + fmt(fuelCost) + ' + Bro/vej ' + fmt(toll) + ' + Færger ' + fmt(ferryTotal) + ' kr'
+    : '';
 }
 
-document.getElementById('btn-drive').addEventListener('click', function() { legs.push({ type:'drive', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null }); renderLegs(); });
-document.getElementById('btn-ferry').addEventListener('click', function() { legs.push({ type:'ferry', from:'', fromLat:null, fromLon:null, to:'', toLat:null, toLon:null, name:'', price:0 }); renderLegs(); });
+// ── MOBILE MAP TOGGLE ─────────────────────────────────────────────────────────
+document.getElementById('btn-map-toggle').addEventListener('click', function() {
+  var col = document.getElementById('map-col');
+  var open = col.classList.toggle('open');
+  this.textContent = open ? 'Skjul kort ▴' : 'Vis kort ▾';
+  if (open) map.invalidateSize();
+});
+
+// ── WIRE UP ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-drive').addEventListener('click', addDriveLeg);
+document.getElementById('btn-ferry').addEventListener('click', addFerryLeg);
 
 document.querySelectorAll('[data-preset]').forEach(function(btn) {
   btn.addEventListener('click', function() {
@@ -453,7 +608,7 @@ document.querySelectorAll('[data-preset]').forEach(function(btn) {
   });
 });
 
-['f-cons', 'f-price', 'f-toll', 'f-trip'].forEach(function(id) {
+['f-cons','f-price','f-toll','f-trip'].forEach(function(id) {
   document.getElementById(id).addEventListener('input', recalc);
 });
 
