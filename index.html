@@ -905,6 +905,11 @@ document.addEventListener('change', function(e) {
   if (field && rid && idx >= 0) updateLegField(rid, idx, field, el.value);
 });
 
+// Expose to global scope for inline handlers
+window.setLang   = setLang;
+window.switchTab = switchTab;
+window.addRoute  = addRoute;
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('f-cons').value  = S.cons;
