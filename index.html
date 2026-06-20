@@ -3,269 +3,533 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#E61919">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Vejvis">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Vejvis</title>
+<meta name="apple-mobile-web-app-title" content="VEJ·VIS">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>VEJ·VIS</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- prevent flash of wrong theme -->
+<script>
+(function(){
+  var t = localStorage.getItem('vjtheme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --blue: #2563EB; --blue-lt: #EFF6FF; --blue-dk: #1D4ED8;
-  --green: #059669; --green-lt: #ECFDF5;
-  --amber: #B45309; --amber-lt: #FFFBEB;
-  --purple: #7C3AED; --purple-lt: #F5F3FF;
-  --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB;
-  --gray-400: #9CA3AF; --gray-600: #4B5563; --gray-900: #111827;
-  --red: #EF4444;
-  --r: 12px; --r-sm: 6px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
-  --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.05);
+/* fonts — place font files in /fonts/ alongside index.html */
+@font-face {
+  font-family: 'Gnomon';
+  src: url('fonts/Gnomon-Heavy.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
 }
+@font-face {
+  font-family: 'Drafting';
+  src: url('fonts/Drafting-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── THEMES ─────────────────────────────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg:        #121212;
+  --surface:   #1C1C1C;
+  --surface2:  #242424;
+  --border:    #2A2A2A;
+  --border-hi: #3C3C3C;
+  --fg:        #EAEAEA;
+  --fg-muted:  #6B6B6B;
+  --accent:    #E61919;
+  --status:    #4AF626;
+  --tile-layer: dark_all;
+}
+:root[data-theme="light"] {
+  --bg:        #F5F4F0;
+  --surface:   #FFFFFF;
+  --surface2:  #ECECEA;
+  --border:    #D0CFC9;
+  --border-hi: #AAAAAA;
+  --fg:        #111111;
+  --fg-muted:  #888888;
+  --accent:    #C41010;
+  --status:    #1A6B00;
+  --tile-layer: light_all;
+}
+
+/* ── BASE ───────────────────────────────────────────────────────────────── */
 html, body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  font-size: 14px; color: var(--gray-900);
-  background: var(--gray-50); min-height: 100%;
+  font-family: 'Drafting', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+  min-height: 100%;
   -webkit-text-size-adjust: 100%;
 }
 
-/* HEADER */
+/* CRT scanlines — dark mode only */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.05) 2px,
+    rgba(0,0,0,0.05) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
 .app-header {
-  background: var(--blue); color: #fff;
-  padding: 14px 16px 12px;
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
-  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
-.app-header p  { font-size: 11px; opacity: .7; margin-top: 1px; }
+.wordmark {
+  font-family: 'Gnomon', 'Archivo Black', 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  line-height: 1;
+}
+.wordmark .dot { color: var(--accent); }
+.header-sub {
+  font-size: 9px;
+  color: var(--fg-muted);
+  margin-top: 3px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.header-controls { display: flex; align-items: center; gap: 6px; }
 
-.lang-toggle { display: flex; gap: 4px; }
-.lang-toggle button {
-  padding: 4px 10px; font-size: 11px; font-weight: 600;
-  font-family: inherit; border: 1.5px solid rgba(255,255,255,.35);
-  border-radius: 99px; background: transparent;
-  color: rgba(255,255,255,.7); cursor: pointer;
-  transition: all .15s;
+/* ── BUTTONS ─────────────────────────────────────────────────────────────── */
+.btn {
+  font-family: 'Drafting', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  white-space: nowrap;
 }
-.lang-toggle button.active {
-  background: rgba(255,255,255,.2);
-  border-color: rgba(255,255,255,.85); color: #fff;
-}
+.btn:hover { border-color: var(--fg); color: var(--fg); }
+.btn.active { border-color: var(--fg); color: var(--fg); background: var(--surface2); }
 
-/* VEHICLE BAR */
+/* ── VEHICLE BAR ─────────────────────────────────────────────────────────── */
 .vehicle-bar {
-  background: #fff; border-bottom: 1px solid var(--gray-200);
-  padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .v-field { flex: 1; min-width: 130px; }
 .v-field label {
-  display: block; font-size: 10px; font-weight: 600;
-  color: var(--gray-400); text-transform: uppercase;
-  letter-spacing: .06em; margin-bottom: 4px;
+  display: block;
+  font-size: 9px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
 }
 .v-field input {
-  display: block; width: 100%; padding: 7px 9px;
-  font-size: 14px; font-family: inherit;
-  border: 1.5px solid var(--gray-200); border-radius: var(--r-sm);
-  background: var(--gray-50); color: var(--gray-900);
-  outline: none; -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-family: 'Drafting', monospace;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--fg);
+  outline: none;
+  -webkit-appearance: none;
 }
-.v-field input:focus { border-color: var(--blue); background: #fff; }
+.v-field input:focus { border-color: var(--fg); }
 
-/* TABS */
+/* ── TABS ────────────────────────────────────────────────────────────────── */
 .tabs-wrap {
-  background: var(--gray-50);
-  padding: 12px 16px 0;
-  position: sticky; top: 57px; z-index: 90;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 56px;
+  z-index: 90;
+  display: flex;
 }
-.tabs { display: flex; gap: 4px; }
 .tab-btn {
-  flex: 1; padding: 10px; font-size: 13px; font-weight: 600;
-  font-family: inherit; border: none;
-  border-radius: var(--r-sm) var(--r-sm) 0 0;
-  background: var(--gray-200); color: var(--gray-600); cursor: pointer;
-  transition: all .12s;
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  -webkit-appearance: none;
 }
-.tab-btn.active { background: #fff; color: var(--blue); }
+.tab-btn.active { color: var(--fg); border-bottom-color: var(--accent); }
 
-/* PRESET ROW */
-.preset-section { padding: 12px 16px 0; }
+/* ── PRESET ROW ──────────────────────────────────────────────────────────── */
+.preset-section {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
 .preset-lbl {
-  font-size: 10px; font-weight: 600; color: var(--gray-400);
-  text-transform: uppercase; letter-spacing: .06em;
+  font-size: 9px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   margin-bottom: 6px;
 }
 .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn-preset {
-  padding: 5px 12px; font-size: 11px; font-weight: 500;
-  font-family: inherit; border: 1.5px solid var(--gray-200);
-  border-radius: 99px; background: #fff; color: var(--gray-600);
-  cursor: pointer; white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  white-space: nowrap;
 }
-.btn-preset:hover { border-color: var(--blue); color: var(--blue); }
+.btn-preset:hover { border-color: var(--fg); color: var(--fg); }
 
-/* ROUTE LIST */
-.route-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+/* ── ROUTE LIST ──────────────────────────────────────────────────────────── */
+.route-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 
-/* ROUTE CARD */
+/* ── ROUTE CARD ──────────────────────────────────────────────────────────── */
 .route-card {
-  background: #fff; border-radius: var(--r);
-  box-shadow: var(--shadow); overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
 }
 .route-header {
-  padding: 14px 16px 12px;
-  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
+.route-card.open .route-header { border-bottom: 1px solid var(--border); }
 .route-header-main { flex: 1; min-width: 0; cursor: pointer; }
 .route-name {
-  font-size: 15px; font-weight: 600;
-  border: none; background: transparent;
-  color: var(--gray-900); width: 100%;
-  font-family: inherit; outline: none; padding: 0;
+  font-family: 'Drafting', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  width: 100%;
+  outline: none;
+  padding: 0;
   cursor: text;
 }
-.route-name:focus { color: var(--blue); }
-.route-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
-.route-cost { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
-.route-cost-unit { font-size: 11px; color: var(--gray-400); margin-left: 2px; }
-.route-km { font-size: 11px; color: var(--gray-400); }
+.route-name:focus { color: var(--accent); }
+.route-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.route-cost-wrap { display: flex; align-items: baseline; gap: 2px; }
+.route-cost-arrow { color: var(--accent); font-size: 12px; font-family: monospace; }
+.route-cost {
+  font-family: 'Drafting', monospace;
+  font-size: 24px;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.route-cost-unit {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: 'Drafting', monospace;
+  margin-left: 1px;
+}
+.route-km {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: 'Drafting', monospace;
+}
 .badge {
-  font-size: 10px; font-weight: 700; padding: 2px 8px;
-  border-radius: 99px; white-space: nowrap;
+  font-size: 9px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid var(--status);
+  color: var(--status);
+  white-space: nowrap;
 }
-.badge-cheapest { background: var(--green-lt); color: var(--green); }
-.route-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-top: 2px; }
+.route-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
 .btn-icon {
-  background: none; border: none; cursor: pointer;
-  color: var(--gray-400); font-size: 18px; line-height: 1;
-  padding: 3px 5px; -webkit-appearance: none; border-radius: var(--r-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  -webkit-appearance: none;
+  font-family: monospace;
 }
-.btn-icon:hover { color: var(--red); background: var(--gray-100); }
-.chevron { font-size: 11px; color: var(--gray-400); transition: transform .15s; }
+.btn-icon:hover { color: var(--accent); }
+.chevron { font-size: 10px; color: var(--fg-muted); transition: transform .15s; }
 .route-card.open .chevron { transform: rotate(180deg); }
 
-/* ROUTE BODY */
-.route-body { display: none; border-top: 1px solid var(--gray-100); }
+/* ── ROUTE BODY ──────────────────────────────────────────────────────────── */
+.route-body { display: none; }
 .route-card.open .route-body { display: block; }
 
-/* LEG LIST */
-.leg-list { list-style: none; padding: 6px 16px; }
+/* ── LEG LIST ────────────────────────────────────────────────────────────── */
+.leg-list { list-style: none; }
 .leg-item {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 7px 0; border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
 }
 .leg-item:last-child { border-bottom: none; }
 .leg-icon {
-  width: 26px; height: 26px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 12px; margin-top: 2px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 1px solid var(--border-hi);
+  color: var(--fg-muted);
 }
-.leg-icon.drive  { background: var(--blue-lt); }
-.leg-icon.ferry  { background: var(--green-lt); }
-.leg-icon.bridge { background: var(--amber-lt); }
-.leg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.leg-row { display: flex; gap: 4px; align-items: center; }
-.leg-lbl { font-size: 10px; color: var(--gray-400); width: 26px; flex-shrink: 0; }
+.leg-icon.ferry, .leg-icon.bridge { color: var(--accent); border-color: var(--accent); }
+.leg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.leg-row { display: flex; gap: 6px; align-items: center; }
+.leg-lbl {
+  font-size: 9px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  width: 28px;
+  flex-shrink: 0;
+}
 .leg-inp {
-  flex: 1; min-width: 0; padding: 4px 7px; font-size: 12px;
-  font-family: inherit; border: 1.5px solid var(--gray-200);
-  border-radius: var(--r-sm); background: #fff; color: var(--gray-900); outline: none;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 7px;
+  font-size: 12px;
+  font-family: 'Drafting', monospace;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--fg);
+  outline: none;
+  -webkit-appearance: none;
 }
-.leg-inp:focus { border-color: var(--blue); }
-.leg-price { width: 74px; }
-.leg-price-unit { font-size: 10px; color: var(--gray-400); flex-shrink: 0; }
+.leg-inp:focus { border-color: var(--fg); }
+.leg-price { width: 80px; }
+.leg-price-unit {
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: 'Drafting', monospace;
+  flex-shrink: 0;
+}
 .leg-type-badge {
-  font-size: 10px; font-weight: 600; padding: 2px 8px;
-  border-radius: 99px; border: 1.5px solid; cursor: pointer;
-  -webkit-appearance: none; background: none; font-family: inherit; flex-shrink: 0;
+  font-size: 10px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid;
+  cursor: pointer;
+  -webkit-appearance: none;
+  background: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.leg-type-badge.drive  { color: var(--blue);   border-color: #BFDBFE; background: var(--blue-lt); }
-.leg-type-badge.ferry  { color: var(--green);  border-color: #6EE7B7; background: var(--green-lt); }
-.leg-type-badge.bridge { color: var(--amber);  border-color: #FCD34D; background: var(--amber-lt); }
+.leg-type-badge.drive  { color: var(--fg-muted); border-color: var(--border-hi); }
+.leg-type-badge.ferry  { color: var(--accent); border-color: var(--accent); }
+.leg-type-badge.bridge { color: var(--accent); border-color: var(--accent); }
 .btn-leg-remove {
-  background: none; border: none; color: var(--gray-300);
-  font-size: 16px; line-height: 1; cursor: pointer;
-  padding: 2px 4px; flex-shrink: 0; -webkit-appearance: none; margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+  margin-top: 2px;
+  font-family: monospace;
 }
-.btn-leg-remove:hover { color: var(--red); }
-
-/* EMPTY LEG STATE */
+.btn-leg-remove:hover { color: var(--accent); }
 .leg-empty {
-  padding: 16px 0; font-size: 12px; color: var(--gray-400); text-align: center;
+  padding: 14px 14px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  letter-spacing: 0.04em;
 }
 
-/* ADD LEG BAR */
+/* ── ADD LEG BAR ─────────────────────────────────────────────────────────── */
 .add-leg-bar {
-  padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap;
-  border-top: 1px solid var(--gray-100);
+  padding: 8px 14px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
 }
 .btn-add-leg {
-  padding: 6px 13px; font-size: 11px; font-weight: 500;
-  font-family: inherit; border: 1.5px solid var(--gray-200);
-  border-radius: 99px; background: #fff; color: var(--gray-600);
-  cursor: pointer; -webkit-appearance: none; white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  white-space: nowrap;
 }
-.btn-add-leg:hover { background: var(--gray-50); }
+.btn-add-leg:hover { border-color: var(--fg); color: var(--fg); }
 
-/* COST BREAKDOWN */
+/* ── COST BREAKDOWN ──────────────────────────────────────────────────────── */
 .route-breakdown {
-  padding: 10px 16px; background: var(--gray-50);
-  border-top: 1px solid var(--gray-100); display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
 }
-.bd-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray-600); }
+.bd-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: 'Drafting', monospace;
+  color: var(--fg-muted);
+  padding: 2px 0;
+  letter-spacing: 0.03em;
+}
 .bd-row.total {
-  font-size: 13px; font-weight: 700; color: var(--gray-900);
-  border-top: 1px solid var(--gray-200); margin-top: 4px; padding-top: 6px;
+  font-size: 12px;
+  color: var(--fg);
+  border-top: 1px solid var(--border-hi);
+  margin-top: 4px;
+  padding-top: 6px;
 }
 
-/* MAP */
-.route-map-wrap { border-top: 1px solid var(--gray-100); position: relative; }
+/* ── MAP ─────────────────────────────────────────────────────────────────── */
+.route-map-wrap { border-top: 1px solid var(--border); }
 .route-map { height: 200px; }
 .map-status {
-  padding: 5px 12px; font-size: 10px; color: var(--gray-400);
-  background: #fff; border-top: 1px solid var(--gray-100);
-  display: flex; gap: 12px; align-items: center;
+  padding: 5px 14px;
+  font-size: 10px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 14px;
+  align-items: center;
 }
-.legend-item { display: flex; align-items: center; gap: 4px; }
-.legend-line { width: 18px; height: 2px; }
-.legend-line.drive  { background: var(--blue); }
-.legend-line.ferry  { background: repeating-linear-gradient(90deg,var(--green) 0,var(--green) 5px,transparent 5px,transparent 9px); }
-.legend-line.bridge { background: var(--amber); }
-.map-status-text { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-line { width: 16px; height: 2px; }
+.legend-line.drive  { background: var(--fg); }
+.legend-line.ferry  { background: repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 4px,transparent 4px,transparent 8px); }
+.legend-line.bridge { background: var(--accent); }
+.map-status-text {
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--status);
+}
 
-/* BOTTOM BAR */
-.bottom-bar { padding: 0 16px 32px; }
+/* ── BOTTOM BAR ──────────────────────────────────────────────────────────── */
+.bottom-bar { padding: 12px 16px 40px; }
 .btn-primary {
-  width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
-  font-family: inherit; border: none; border-radius: var(--r);
-  background: var(--blue); color: #fff; cursor: pointer;
-  -webkit-appearance: none; box-shadow: var(--shadow-md);
+  width: 100%;
+  padding: 12px;
+  font-size: 11px;
+  font-family: 'Drafting', monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  -webkit-appearance: none;
 }
-.btn-primary:hover { background: var(--blue-dk); }
+.btn-primary:hover { background: var(--fg); color: var(--bg); }
 
-/* EMPTY STATE */
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
 .empty-state {
-  text-align: center; padding: 48px 24px; color: var(--gray-400);
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--fg-muted);
 }
-.empty-state-icon { font-size: 36px; margin-bottom: 12px; }
-.empty-state h3 { font-size: 15px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; }
-.empty-state p  { font-size: 13px; line-height: 1.5; }
+.empty-state-icon { font-size: 32px; margin-bottom: 14px; opacity: 0.25; }
+.empty-state h3 {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+  font-family: 'Drafting', monospace;
+}
+.empty-state p {
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  font-family: 'Drafting', monospace;
+}
 </style>
 </head>
 <body>
 
 <header class="app-header">
   <div>
-    <h1>Vejvis</h1>
-    <p id="app-subtitle"></p>
+    <div class="wordmark">VEJ<span class="dot">·</span>VIS</div>
+    <div class="header-sub" id="app-subtitle"></div>
   </div>
-  <div class="lang-toggle">
-    <button id="lang-en" onclick="setLang('en')">EN</button>
-    <button id="lang-da" onclick="setLang('da')">DA</button>
+  <div class="header-controls">
+    <button class="btn" id="btn-theme" onclick="toggleTheme()"></button>
+    <button class="btn" id="lang-en" onclick="setLang('en')">EN</button>
+    <button class="btn" id="lang-da" onclick="setLang('da')">DA</button>
   </div>
 </header>
 
@@ -283,10 +547,8 @@ html, body {
 </div>
 
 <div class="tabs-wrap">
-  <div class="tabs">
-    <button class="tab-btn" id="tab-out" onclick="switchTab('out')"></button>
-    <button class="tab-btn" id="tab-ret" onclick="switchTab('ret')"></button>
-  </div>
+  <button class="tab-btn" id="tab-out" onclick="switchTab('out')"></button>
+  <button class="tab-btn" id="tab-ret" onclick="switchTab('ret')"></button>
 </div>
 
 <div class="preset-section">
@@ -322,7 +584,7 @@ var S = {
 // ── TRANSLATIONS ──────────────────────────────────────────────────────────────
 var TR = {
   en: {
-    subtitle: 'Trip cost calculator',
+    subtitle: 'Route cost calculator',
     outbound: 'Outbound', ret: 'Return',
     add_route: '+ Add route', new_route: 'New route',
     presets: 'Load preset:',
@@ -331,15 +593,16 @@ var TR = {
     lbl_cons: 'Consumption (L/100 km)', lbl_price: 'Fuel price (kr/L)',
     from: 'From', to: 'To', name: 'Name',
     cheapest: 'Cheapest',
-    fuel_cost: 'Fuel cost', crossings: 'Ferries & bridges', km_lbl: 'Road km',
+    fuel_cost: 'Fuel', crossings: 'Crossings', km_lbl: 'Road km',
     total: 'Total',
-    no_legs: 'No legs yet — add a drive, ferry, or bridge.',
-    empty: 'No routes yet.', empty_hint: 'Load a preset or add a route.',
+    no_legs: 'No legs — add drive, ferry, or bridge.',
+    empty: 'No routes.', empty_hint: 'Load a preset or add a route.',
     routing: 'Routing…', done: 'Done.',
     one_way: 'one-way',
+    theme_dark: '[ Dark ]', theme_light: '[ Light ]',
   },
   da: {
-    subtitle: 'Rejseomkostningsberegner',
+    subtitle: 'Ruteomkostningsberegner',
     outbound: 'Ud', ret: 'Hjem',
     add_route: '+ Tilføj rute', new_route: 'Ny rute',
     presets: 'Indlæs forudindstilling:',
@@ -348,15 +611,23 @@ var TR = {
     lbl_cons: 'Forbrug (L/100 km)', lbl_price: 'Brændstofpris (kr/L)',
     from: 'Fra', to: 'Til', name: 'Navn',
     cheapest: 'Billigst',
-    fuel_cost: 'Brændstofomk.', crossings: 'Færger & broer', km_lbl: 'Vejkm',
+    fuel_cost: 'Brændstof', crossings: 'Overfarter', km_lbl: 'Vejkm',
     total: 'Total',
-    no_legs: 'Ingen etaper endnu — tilføj køretur, færge eller bro.',
-    empty: 'Ingen ruter endnu.', empty_hint: 'Indlæs en forudindstilling eller tilføj en rute.',
+    no_legs: 'Ingen etaper — tilføj køretur, færge eller bro.',
+    empty: 'Ingen ruter.', empty_hint: 'Indlæs en forudindstilling eller tilføj en rute.',
     routing: 'Beregner rute…', done: 'Færdig.',
     one_way: 'én vej',
+    theme_dark: '[ Mørk ]', theme_light: '[ Lys ]',
   }
 };
 function t(k) { return TR[S.lang][k] || k; }
+
+// ── ICONS ─────────────────────────────────────────────────────────────────────
+var SVG = {
+  drive: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="5" width="11" height="6" stroke="currentColor" stroke-width="1.2"/><path d="M3 5L4.5 2H9.5L11 5" stroke="currentColor" stroke-width="1.2"/><circle cx="3.5" cy="10.5" r="1" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1" fill="currentColor"/></svg>',
+  ferry: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 8.5H12L10.5 12H3.5L2 8.5Z" stroke="currentColor" stroke-width="1.2"/><rect x="4.5" y="5" width="5" height="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 5V2.5" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 2.5H8.5" stroke="currentColor" stroke-width="1.2"/></svg>',
+  bridge: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="1" y1="10" x2="13" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="1" y1="7" x2="1" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="13" y1="7" x2="13" y2="10" stroke="currentColor" stroke-width="1.2"/><path d="M1 7.5Q7 3 13 7.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="4" y1="8.5" x2="4" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="7" y1="6.5" x2="7" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="8.5" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>'
+};
 
 // ── PRESETS ───────────────────────────────────────────────────────────────────
 var PRESETS = {
@@ -386,7 +657,7 @@ var PRESETS = {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function uid() { return 'r' + (S.uid++); }
-function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
+function fmt(n) { return Math.round(n).toLocaleString('da-DK'); }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')
     .replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -397,6 +668,49 @@ function routeById(id) {
 }
 function cloneLegs(legs) {
   return legs.map(function(l){ return Object.assign({}, l); });
+}
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+function tileUrl() {
+  var theme = document.documentElement.getAttribute('data-theme');
+  var layer = theme === 'dark' ? 'dark_all' : 'light_all';
+  return 'https://{s}.basemaps.cartocdn.com/' + layer + '/{z}/{x}/{y}{r}.png';
+}
+
+function themeColors() {
+  var theme = document.documentElement.getAttribute('data-theme');
+  return theme === 'dark'
+    ? { drive: '#EAEAEA', ferry: '#E61919', bridge: '#E61919', marker: '#E61919' }
+    : { drive: '#333333', ferry: '#C41010', bridge: '#C41010', marker: '#C41010' };
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('vjtheme', theme);
+  updateThemeBtn();
+  // Update tile layers on active maps
+  var url = tileUrl();
+  Object.keys(S.maps).forEach(function(id) {
+    if (S.maps[id] && S.maps[id]._tileLayer) {
+      S.maps[id]._tileLayer.setUrl(url);
+    }
+  });
+  // Redraw polylines with new colors
+  Object.keys(S.maps).forEach(function(id) {
+    var route = routeById(id);
+    if (route && route.geo) drawFromGeo(id);
+  });
+}
+
+function toggleTheme() {
+  var cur = document.documentElement.getAttribute('data-theme');
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+function updateThemeBtn() {
+  var theme = document.documentElement.getAttribute('data-theme');
+  var btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = theme === 'dark' ? t('theme_light') : t('theme_dark');
 }
 
 // ── RECALC ────────────────────────────────────────────────────────────────────
@@ -457,10 +771,13 @@ function initMap(id) {
   if (!el) return;
   if (S.maps[id]) { try { S.maps[id].remove(); } catch(e){} }
   var m = L.map(el, { zoomControl: true }).setView([55.8, 11.5], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 18
+  var tl = L.tileLayer(tileUrl(), {
+    attribution: '&copy; <a href="https://www.openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
   }).addTo(m);
   S.maps[id] = m;
+  S.maps[id]._tileLayer = tl;
   S.maps[id]._drive   = L.layerGroup().addTo(m);
   S.maps[id]._ferry   = L.layerGroup().addTo(m);
   S.maps[id]._bridge  = L.layerGroup().addTo(m);
@@ -468,10 +785,11 @@ function initMap(id) {
 }
 
 function drawMarker(m, ll, name, big) {
-  var sz = big ? 13 : 9;
+  var sz = big ? 12 : 8;
+  var col = themeColors().marker;
   var icon = L.divIcon({
     className: '',
-    html: '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:#2563EB;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
+    html: '<div style="width:'+sz+'px;height:'+sz+'px;background:'+col+';border:1.5px solid #fff;"></div>',
     iconSize: [sz,sz], iconAnchor: [Math.floor(sz/2), Math.floor(sz/2)]
   });
   L.marker(ll, {icon:icon}).bindTooltip(name||'', {direction:'top',offset:[0,-8]}).addTo(m._markers);
@@ -483,18 +801,19 @@ function drawFromGeo(id) {
   if (!route || !m || !route.geo) return;
   m._drive.clearLayers(); m._ferry.clearLayers();
   m._bridge.clearLayers(); m._markers.clearLayers();
+  var c = themeColors();
   var g = route.geo;
   var allCoords = [];
   g.driveSegs.forEach(function(seg) {
-    L.polyline(seg, {color:'#2563EB', weight:3, opacity:.82}).addTo(m._drive);
+    L.polyline(seg, {color:c.drive, weight:3, opacity:.85}).addTo(m._drive);
     allCoords = allCoords.concat(seg);
   });
   g.ferrySegs.forEach(function(seg) {
-    L.polyline(seg, {color:'#059669', weight:2.5, dashArray:'7 5', opacity:.85}).addTo(m._ferry);
+    L.polyline(seg, {color:c.ferry, weight:2.5, dashArray:'7 5', opacity:.9}).addTo(m._ferry);
     allCoords = allCoords.concat(seg);
   });
   g.bridgeSegs.forEach(function(seg) {
-    L.polyline(seg, {color:'#B45309', weight:3, opacity:.85}).addTo(m._bridge);
+    L.polyline(seg, {color:c.bridge, weight:3, opacity:.9}).addTo(m._bridge);
     allCoords = allCoords.concat(seg);
   });
   g.markers.forEach(function(mk) { drawMarker(m, mk.ll, mk.name, mk.big); });
@@ -565,7 +884,6 @@ function updateRouteHeader(id) {
   if (!route) return;
   var costEl = document.getElementById('rcost-' + id);
   var bdEl   = document.getElementById('rbd-'   + id);
-  var badgeEl= document.getElementById('rbadge-'+ id);
   var kmEl   = document.getElementById('rkm-'   + id);
   if (costEl) costEl.textContent = route.total > 0 ? fmt(route.total) : '–';
   if (kmEl)   kmEl.textContent   = route.km > 0 ? route.km + ' km' : '';
@@ -577,7 +895,7 @@ function updateRouteHeader(id) {
   var cheap = cheapestId(S.tab);
   routes().forEach(function(r) {
     var b = document.getElementById('rbadge-' + r.id);
-    if (b) b.innerHTML = (cheap === r.id) ? '<span class="badge badge-cheapest">'+t('cheapest')+'</span>' : '';
+    if (b) b.innerHTML = (cheap === r.id) ? '<span class="badge">'+t('cheapest')+'</span>' : '';
   });
 }
 
@@ -586,9 +904,8 @@ function updateAllHeaders() {
 }
 
 function legHTML(routeId, leg, idx) {
-  var typeIcons = {drive:'🚗', ferry:'⛴', bridge:'🌉'};
-  var icon = typeIcons[leg.type] || '🚗';
-  var isMove = leg.type !== 'drive'; // ferry or bridge has price
+  var icon = SVG[leg.type] || SVG.drive;
+  var isMove = leg.type !== 'drive';
   var rows = [
     '<div class="leg-row">',
       '<span class="leg-lbl">'+esc(t('from'))+'</span>',
@@ -640,7 +957,7 @@ function legHTML(routeId, leg, idx) {
 
 function routeCardHTML(route) {
   var cheap = cheapestId(S.tab);
-  var badge = (cheap === route.id) ? '<span class="badge badge-cheapest">'+t('cheapest')+'</span>' : '';
+  var badge = (cheap === route.id) ? '<span class="badge">'+t('cheapest')+'</span>' : '';
   var cost  = route.total > 0 ? fmt(route.total) : '–';
   var km    = route.km > 0 ? route.km + ' km' : '';
   var bd    = route.total > 0
@@ -661,8 +978,11 @@ function routeCardHTML(route) {
             ' data-rid="'+route.id+'" data-action="rename"',
             ' onclick="event.stopPropagation()">',
           '<div class="route-meta">',
-            '<span class="route-cost" id="rcost-'+route.id+'">'+cost+'</span>',
-            '<span class="route-cost-unit">kr</span>',
+            '<div class="route-cost-wrap">',
+              '<span class="route-cost-arrow">&gt;&gt;</span>',
+              '<span class="route-cost" id="rcost-'+route.id+'">'+cost+'</span>',
+              '<span class="route-cost-unit">kr</span>',
+            '</div>',
             '<span class="route-km" id="rkm-'+route.id+'">'+km+'</span>',
             '<span id="rbadge-'+route.id+'">'+badge+'</span>',
           '</div>',
@@ -683,9 +1003,9 @@ function routeCardHTML(route) {
         '<div class="route-map-wrap">',
           '<div class="route-map" id="map-'+route.id+'"></div>',
           '<div class="map-status">',
-            '<div class="legend-item"><div class="legend-line drive"></div> '+t('drive')+'</div>',
-            '<div class="legend-item"><div class="legend-line ferry"></div> '+t('ferry')+'</div>',
-            '<div class="legend-item"><div class="legend-line bridge"></div> '+t('bridge')+'</div>',
+            '<div class="legend-item"><div class="legend-line drive"></div>'+t('drive')+'</div>',
+            '<div class="legend-item"><div class="legend-line ferry"></div>'+t('ferry')+'</div>',
+            '<div class="legend-item"><div class="legend-line bridge"></div>'+t('bridge')+'</div>',
             '<span class="map-status-text" id="mstatus-'+route.id+'"></span>',
           '</div>',
         '</div>',
@@ -705,24 +1025,19 @@ function renderLegList(routeId) {
 }
 
 function renderRoutes() {
-  // Destroy maps before wiping DOM
   routes().forEach(function(r) {
     if (S.maps[r.id]) { try { S.maps[r.id].remove(); } catch(e){} delete S.maps[r.id]; }
   });
-
   var el = document.getElementById('route-list');
   if (!routes().length) {
     el.innerHTML = '<div class="empty-state">'
-      + '<div class="empty-state-icon">🗺️</div>'
+      + '<div class="empty-state-icon">+</div>'
       + '<h3>'+t('empty')+'</h3>'
       + '<p>'+t('empty_hint')+'</p>'
       + '</div>';
     return;
   }
-
   el.innerHTML = routes().map(routeCardHTML).join('');
-
-  // Re-init maps for open routes
   routes().forEach(function(r) {
     if (S.open[r.id]) {
       initMap(r.id);
@@ -739,11 +1054,11 @@ function renderLabels() {
   document.getElementById('tab-ret').textContent       = t('ret');
   document.getElementById('btn-add-route').textContent = t('add_route');
   document.getElementById('lbl-presets').textContent   = t('presets');
-  document.getElementById('lang-en').className = S.lang==='en' ? 'active' : '';
-  document.getElementById('lang-da').className = S.lang==='da' ? 'active' : '';
+  document.getElementById('lang-en').className = 'btn' + (S.lang==='en' ? ' active' : '');
+  document.getElementById('lang-da').className = 'btn' + (S.lang==='da' ? ' active' : '');
   document.getElementById('tab-out').className = 'tab-btn' + (S.tab==='out' ? ' active' : '');
   document.getElementById('tab-ret').className = 'tab-btn' + (S.tab==='ret' ? ' active' : '');
-  // Preset row
+  updateThemeBtn();
   var pr = document.getElementById('preset-row');
   pr.innerHTML = Object.keys(PRESETS).map(function(k) {
     return '<button class="btn-preset" data-preset="'+k+'">'+esc(PRESETS[k].name)+'</button>';
@@ -756,7 +1071,6 @@ function addRoute() {
   routes().push(route);
   S.open[route.id] = true;
   renderRoutes();
-  // Focus name input
   var nameEl = document.querySelector('#card-'+route.id+' .route-name');
   if (nameEl) { nameEl.focus(); nameEl.select(); }
 }
@@ -771,8 +1085,7 @@ function deleteRoute(id) {
 }
 
 function toggleRoute(id) {
-  var wasOpen = S.open[id];
-  S.open[id] = !wasOpen;
+  S.open[id] = !S.open[id];
   var card = document.getElementById('card-' + id);
   if (!card) return;
   if (S.open[id]) {
@@ -847,7 +1160,6 @@ function updateLegField(routeId, idx, field, val) {
     return;
   }
   if (field === 'name') { leg.name = val; return; }
-  // from / to: reset coords, geocode
   leg[field] = val;
   leg[field === 'from' ? 'fromLat' : 'toLat'] = null;
   leg[field === 'from' ? 'fromLon' : 'toLon'] = null;
@@ -870,20 +1182,15 @@ function switchTab(tab) {
 
 // ── EVENT DELEGATION ──────────────────────────────────────────────────────────
 document.addEventListener('click', function(e) {
-  // Preset buttons
   var presetEl = e.target.closest('[data-preset]');
   if (presetEl) { loadPreset(presetEl.dataset.preset); return; }
-
-  // Walk up to nearest data-action element (handles clicks on children)
   var actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
-
   var action = actionEl.dataset.action;
   var rid    = actionEl.dataset.rid;
   var idx    = actionEl.dataset.idx !== undefined ? parseInt(actionEl.dataset.idx, 10) : -1;
-
   if (action === 'toggle')    { toggleRoute(rid); return; }
-  if (action === 'rename')    { return; } // handled by change event
+  if (action === 'rename')    { return; }
   if (action === 'delete')    { deleteRoute(rid); return; }
   if (action === 'cycle')     { cycleLegType(rid, idx); return; }
   if (action === 'addDrive')  { addLeg(rid, 'drive');  return; }
@@ -905,17 +1212,17 @@ document.addEventListener('change', function(e) {
   if (field && rid && idx >= 0) updateLegField(rid, idx, field, el.value);
 });
 
-// Expose to global scope for inline handlers
-window.setLang   = setLang;
-window.switchTab = switchTab;
-window.addRoute  = addRoute;
+// expose to global for inline handlers
+window.setLang     = setLang;
+window.switchTab   = switchTab;
+window.addRoute    = addRoute;
+window.toggleTheme = toggleTheme;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('f-cons').value  = S.cons;
   document.getElementById('f-price').value = S.price;
   renderLabels();
-  // Load default preset into outbound tab
   loadPreset('dp');
 })();
 
